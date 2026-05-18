@@ -1,26 +1,253 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-0: #fafaf9;
+  --bg-1: #f3f3f1;
+  --bg-2: #e8e8e6;
+  --bg-3: #dedede;
+  --ink-0: #0a0a0a;
+  --ink-1: #1f1f1f;
+  --ink-2: #4a4a4a;
+  --ink-3: #8a8a8a;
+  --ink-4: #b8b8b6;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.14);
+  --shadow-card:
+    0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(0, 0, 0, 0.12);
+  --accent: var(--user-timer-color, #111111);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --danger-ink: #b91c1c;
+  --danger-border: rgba(220, 38, 38, 0.35);
+  --prio-1: #dc2626;
+  --prio-2: #f97316;
+  --prio-3: #3b82f6;
+  --prio-4: #94a3b8;
+  --status-todo: #94a3b8;
+  --status-doing: #3b82f6;
+  --status-done: #10b981;
 }
 
+html.theme-dark {
+  --bg-0: #0a0a0a;
+  --bg-1: #141414;
+  --bg-2: #1f1f1f;
+  --bg-3: #2a2a2a;
+  --ink-0: #fafafa;
+  --ink-1: #e6e6e6;
+  --ink-2: #a8a8a8;
+  --ink-3: #6f6f6f;
+  --ink-4: #3a3a3a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-ink: #fca5a5;
+  --danger-border: rgba(248, 113, 113, 0.45);
+  --prio-1: #f87171;
+  --prio-2: #fb923c;
+  --prio-3: #60a5fa;
+  --prio-4: #64748b;
+  --status-todo: #64748b;
+  --status-doing: #60a5fa;
+  --status-done: #34d399;
+}
+
+@media (prefers-color-scheme: dark) {
+  html.theme-system {
+    --bg-0: #0a0a0a;
+    --bg-1: #141414;
+    --bg-2: #1f1f1f;
+    --bg-3: #2a2a2a;
+    --ink-0: #fafafa;
+    --ink-1: #e6e6e6;
+    --ink-2: #a8a8a8;
+    --ink-3: #6f6f6f;
+    --ink-4: #3a3a3a;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --shadow-card:
+      0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --danger: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.12);
+    --danger-ink: #fca5a5;
+    --danger-border: rgba(248, 113, 113, 0.45);
+    --prio-1: #f87171;
+    --prio-2: #fb923c;
+    --prio-3: #60a5fa;
+    --prio-4: #64748b;
+    --status-todo: #64748b;
+    --status-doing: #60a5fa;
+    --status-done: #34d399;
+  }
+}
+
+/* View Transitions: keep root transition smooth, no crossfade. */
+/* biome-ignore-start lint/correctness/noUnknownTypeSelector: pseudo-element from View Transitions API */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 0;
+}
+::view-transition-new(root) {
+  z-index: 1;
+}
+/* biome-ignore-end lint/correctness/noUnknownTypeSelector: pseudo-element from View Transitions API */
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-ink-0: var(--ink-0);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+html,
+body {
+  background: var(--bg-0);
+  color: var(--ink-0);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--ink-0);
+  color: var(--bg-0);
+}
+
+/* Logo theme swap — driven by the same html.theme-* classes the rest of the
+   app uses. Default shows the light-mode logo; dark / system-prefers-dark
+   swaps to the dark-mode logo. */
+.logo-on-light {
+  display: inline-flex;
+}
+.logo-on-dark {
+  display: none;
+}
+html.theme-dark .logo-on-light {
+  display: none;
+}
+html.theme-dark .logo-on-dark {
+  display: inline-flex;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html.theme-system .logo-on-light {
+    display: none;
+  }
+  html.theme-system .logo-on-dark {
+    display: inline-flex;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Hide scrollbars globally — keep scroll behavior, drop the chrome. */
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+@keyframes timer-shade-drift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes timer-sun-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: blur(34px) brightness(1);
+  }
+  35% {
+    transform: scale(1.06);
+    filter: blur(40px) brightness(1.12);
+  }
+  65% {
+    transform: scale(0.97);
+    filter: blur(30px) brightness(0.95);
+  }
+}
+
+@keyframes timer-sun-shimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.timer-backdrop {
+  background-size: 240% 240%;
+  animation:
+    timer-shade-drift 28s linear infinite,
+    timer-sun-pulse 7.5s ease-in-out infinite;
+  will-change: transform, filter, background-position;
+}
+
+.timer-backdrop-shimmer {
+  animation: timer-sun-shimmer 4.5s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes colon-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.15;
+  }
+}
+.animate-colon-blink {
+  animation: colon-blink 1s steps(1, end) infinite;
 }
