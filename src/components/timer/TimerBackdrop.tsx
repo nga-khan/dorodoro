@@ -25,7 +25,7 @@ export function TimerBackdrop({ color, size, active = true }: Props) {
         height: halo,
         left: `calc(50% - ${halo / 2}px)`,
         top: `calc(50% - ${halo / 2}px)`,
-        opacity: active ? 0.24 : 0.12,
+        opacity: active ? 0.14 : 0.12,
       }}
       aria-hidden
     >

@@ -28,6 +28,8 @@ export function DumpColumn() {
   };
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    // 한글 IME 조합 중 Enter 는 입력 확정용이므로 새 항목으로 처리하지 않는다.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter") {
       e.preventDefault();
       void submit();

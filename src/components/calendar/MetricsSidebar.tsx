@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FiBarChart2,
   FiCheckCircle,
   FiClock,
+  FiEdit3,
   FiFlag,
   FiSmile,
 } from "react-icons/fi";
 import { Sparkline } from "@/components/charts/MiniChart";
 import { useSessionsInRange, useTasksInRange } from "@/db/hooks";
 import { useAppStore } from "@/stores/app";
+import type { ReflectionPeriod } from "@/types/domain";
+import { ReflectionModal } from "./ReflectionModal";
 import { rangeFromCursor } from "./range";
 
 const SAT_LABEL: Record<string, string> = {
@@ -19,12 +22,20 @@ const SAT_LABEL: Record<string, string> = {
   high: "높음",
 };
 
+const REFLECTION_VIEW: Partial<Record<string, ReflectionPeriod>> = {
+  week: "weekly",
+  month: "monthly",
+  year: "yearly",
+};
+
 export function MetricsSidebar() {
   const cursor = useAppStore((s) => s.calendarCursor);
   const view = useAppStore((s) => s.calendarView);
   const { start, end } = rangeFromCursor(cursor, view);
   const tasks = useTasksInRange(start, end);
   const sessions = useSessionsInRange(start, end);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const reflectionPeriod = REFLECTION_VIEW[view];
 
   const stats = useMemo(() => {
     const done = tasks.filter((t) => t.status === "done").length;
@@ -169,6 +180,30 @@ export function MetricsSidebar() {
           </div>
         )}
       </div>
+
+      {reflectionPeriod && (
+        <button
+          type="button"
+          onClick={() => setReflectionOpen(true)}
+          className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--line-strong)] bg-[var(--bg-0)] px-3 py-2 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
+        >
+          <FiEdit3 aria-hidden />
+          {reflectionPeriod === "weekly"
+            ? "주간 회고 작성"
+            : reflectionPeriod === "monthly"
+              ? "월간 회고 작성"
+              : "년간 회고 작성"}
+        </button>
+      )}
+
+      {reflectionPeriod && (
+        <ReflectionModal
+          open={reflectionOpen}
+          period={reflectionPeriod}
+          anchor={start}
+          onClose={() => setReflectionOpen(false)}
+        />
+      )}
     </aside>
   );
 }

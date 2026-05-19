@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   FiCheckCircle,
@@ -35,6 +36,8 @@ const PHASE_ICON = {
   shortBreak: FiCoffee,
   longBreak: FiCheckCircle,
 } as const;
+
+const MINUTE_PRESETS = [20, 30, 50, 60, 90] as const;
 
 const COLOR_PRESETS = [
   "#111111",
@@ -110,9 +113,15 @@ export function TimerPanel() {
         )}
       </div>
 
-      <div
+      <motion.div
         className="relative flex items-center justify-center"
         style={{ width: dialSize, height: dialSize }}
+        initial={false}
+        animate={{
+          scale:
+            state.status === "running" || state.status === "paused" ? 1.06 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 220, damping: 22 }}
       >
         <TimerBackdrop
           color={settings.timerColor}
@@ -126,13 +135,17 @@ export function TimerPanel() {
           remainingMs={state.remainingMs}
           isRunning={state.status === "running"}
         />
-      </div>
-
-      <HourGauge
-        color={settings.timerColor}
-        totalMs={state.totalMs}
-        remainingMs={state.remainingMs}
-      />
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+          style={{ top: `${dialSize * 0.62}px` }}
+        >
+          <HourGauge
+            color={settings.timerColor}
+            totalMs={state.totalMs}
+            remainingMs={state.remainingMs}
+          />
+        </div>
+      </motion.div>
 
       <div className="flex items-center gap-2">
         {state.status === "idle" && (
@@ -190,113 +203,147 @@ export function TimerPanel() {
         )}
       </div>
 
-      {state.status === "idle" && (
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-[var(--line)] bg-[var(--bg-1)] p-4">
-          <div className="flex items-baseline justify-between">
-            <label htmlFor="slider" className="text-xs text-[var(--ink-2)]">
-              작업 시간
-            </label>
-            <span className="font-mono text-sm">
-              {manualMinutes < 60
-                ? `${manualMinutes}분`
-                : `${Math.floor(manualMinutes / 60)}시간 ${manualMinutes % 60}분`}
-            </span>
-          </div>
-          <input
-            id="slider"
-            type="range"
-            min={TIMER_MIN}
-            max={TIMER_MAX}
-            step={TIMER_STEP}
-            value={manualMinutes}
-            onChange={(e) => onSliderChange(Number(e.target.value))}
-            className="w-full accent-[var(--ink-0)]"
-          />
+      <AnimatePresence initial={false}>
+        {state.status === "idle" && (
+          <motion.div
+            key="timer-settings"
+            className="flex w-full max-w-md flex-col gap-4 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--bg-1)] p-4"
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{
+              opacity: 0,
+              y: 8,
+              scale: 0.98,
+              transition: { duration: 0.18, ease: "easeIn" },
+            }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+          >
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="slider" className="text-xs text-[var(--ink-2)]">
+                작업 시간
+              </label>
+              <span className="font-mono text-sm">
+                {manualMinutes < 60
+                  ? `${manualMinutes}분`
+                  : `${Math.floor(manualMinutes / 60)}시간 ${manualMinutes % 60}분`}
+              </span>
+            </div>
+            <input
+              id="slider"
+              type="range"
+              min={TIMER_MIN}
+              max={TIMER_MAX}
+              step={TIMER_STEP}
+              value={manualMinutes}
+              onChange={(e) => onSliderChange(Number(e.target.value))}
+              className="w-full accent-[var(--ink-0)]"
+            />
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[var(--ink-2)]">색상</span>
-            <div className="flex items-center gap-1.5">
-              {COLOR_PRESETS.map((c) => (
+            <div className="flex flex-wrap gap-2">
+              {MINUTE_PRESETS.map((m) => (
                 <button
-                  key={c}
+                  key={m}
                   type="button"
-                  aria-label={`color ${c}`}
-                  onClick={() => onColorChange(c)}
+                  onClick={() => onSliderChange(m)}
                   className={cn(
-                    "h-6 w-6 rounded-full border transition-transform",
-                    settings.timerColor === c
-                      ? "border-[var(--ink-0)] scale-110"
-                      : "border-[var(--line-strong)] hover:scale-105",
+                    "rounded-full border px-3 py-1 text-xs transition",
+                    manualMinutes === m
+                      ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                      : "border-[var(--line)] text-[var(--ink-1)] hover:bg-[var(--bg-2)]",
                   )}
-                  style={{ background: c }}
-                />
+                >
+                  {m}분
+                </button>
               ))}
-              <input
-                type="color"
-                value={settings.timerColor}
-                onChange={(e) => onColorChange(e.target.value)}
-                className="h-6 w-6 cursor-pointer rounded-full border border-[var(--line-strong)] bg-transparent"
-                aria-label="custom color"
-              />
             </div>
-          </div>
 
-          <label className="flex items-center justify-between text-xs">
-            <span className="text-[var(--ink-2)]">자동 사이클 모드</span>
-            <button
-              type="button"
-              onClick={() =>
-                updateSettings({ cycleEnabled: !settings.cycleEnabled })
-              }
-              className={cn(
-                "h-6 w-11 rounded-full border transition-colors",
-                settings.cycleEnabled
-                  ? "border-[var(--ink-0)] bg-[var(--ink-0)]"
-                  : "border-[var(--line-strong)] bg-[var(--bg-2)]",
-              )}
-              aria-pressed={settings.cycleEnabled}
-            >
-              <span
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--ink-2)]">색상</span>
+              <div className="flex items-center gap-1.5">
+                {COLOR_PRESETS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`color ${c}`}
+                    onClick={() => onColorChange(c)}
+                    className={cn(
+                      "h-6 w-6 rounded-full border transition-transform",
+                      settings.timerColor === c
+                        ? "border-[var(--ink-0)] scale-110"
+                        : "border-[var(--line-strong)] hover:scale-105",
+                    )}
+                    style={{ background: c }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={settings.timerColor}
+                  onChange={(e) => onColorChange(e.target.value)}
+                  className="h-6 w-6 cursor-pointer rounded-full border border-[var(--line-strong)] bg-transparent"
+                  aria-label="custom color"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between text-xs">
+              <span className="text-[var(--ink-2)]">자동 사이클 모드</span>
+              <button
+                type="button"
+                onClick={() =>
+                  updateSettings({ cycleEnabled: !settings.cycleEnabled })
+                }
                 className={cn(
-                  "block h-5 w-5 rounded-full bg-[var(--bg-0)] transition-transform",
-                  settings.cycleEnabled ? "translate-x-5" : "translate-x-0.5",
+                  "h-6 w-11 rounded-full border transition-colors",
+                  settings.cycleEnabled
+                    ? "border-[var(--ink-0)] bg-[var(--ink-0)]"
+                    : "border-[var(--line-strong)] bg-[var(--bg-2)]",
                 )}
-              />
-            </button>
-          </label>
+                aria-pressed={settings.cycleEnabled}
+              >
+                <span
+                  className={cn(
+                    "block h-5 w-5 rounded-full bg-[var(--bg-0)] transition-transform",
+                    settings.cycleEnabled ? "translate-x-5" : "translate-x-0.5",
+                  )}
+                />
+              </button>
+            </label>
 
-          {settings.cycleEnabled && (
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <CycleInput
-                label="짧은 휴식 (분)"
-                value={settings.cycle.shortMin}
-                onChange={(v) =>
-                  updateSettings({ cycle: { ...settings.cycle, shortMin: v } })
-                }
-              />
-              <CycleInput
-                label="긴 휴식 (분)"
-                value={settings.cycle.longMin}
-                onChange={(v) =>
-                  updateSettings({ cycle: { ...settings.cycle, longMin: v } })
-                }
-              />
-              <CycleInput
-                label="긴휴식 전 세트"
-                value={settings.cycle.setsBeforeLong}
-                onChange={(v) =>
-                  updateSettings({
-                    cycle: {
-                      ...settings.cycle,
-                      setsBeforeLong: Math.max(1, v),
-                    },
-                  })
-                }
-              />
-            </div>
-          )}
-        </div>
-      )}
+            {settings.cycleEnabled && (
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <CycleInput
+                  label="짧은 휴식 (분)"
+                  value={settings.cycle.shortMin}
+                  onChange={(v) =>
+                    updateSettings({
+                      cycle: { ...settings.cycle, shortMin: v },
+                    })
+                  }
+                />
+                <CycleInput
+                  label="긴 휴식 (분)"
+                  value={settings.cycle.longMin}
+                  onChange={(v) =>
+                    updateSettings({ cycle: { ...settings.cycle, longMin: v } })
+                  }
+                />
+                <CycleInput
+                  label="긴휴식 전 세트"
+                  value={settings.cycle.setsBeforeLong}
+                  onChange={(v) =>
+                    updateSettings({
+                      cycle: {
+                        ...settings.cycle,
+                        setsBeforeLong: Math.max(1, v),
+                      },
+                    })
+                  }
+                />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <FocusSummaryCards />
 

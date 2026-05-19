@@ -23,7 +23,11 @@ import { PRIORITY_TONE, STATUS_TONE } from "@/lib/taskColors";
 import { useAppStore } from "@/stores/app";
 import type { Task } from "@/types/domain";
 
-export function TaskListView() {
+export function TaskListView({
+  externalDnd = false,
+}: {
+  externalDnd?: boolean;
+} = {}) {
   const tasks = useTasks();
   const labels = useLabels();
   const sensors = useSensors(
@@ -39,6 +43,7 @@ export function TaskListView() {
     const ids = tasks.map((t) => t.id);
     const oldIndex = ids.indexOf(String(active.id));
     const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
     const next = arrayMove(ids, oldIndex, newIndex);
     await reorderTasks(next);
   };
@@ -51,27 +56,33 @@ export function TaskListView() {
     );
   }
 
+  const body = (
+    <SortableContext
+      items={tasks.map((t) => t.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <ul className="space-y-1.5">
+        {tasks.map((t) => (
+          <SortableRow
+            key={t.id}
+            task={t}
+            labels={labels}
+            onToggle={() => toggleTaskStatus(t.id)}
+          />
+        ))}
+      </ul>
+    </SortableContext>
+  );
+
+  if (externalDnd) return body;
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
     >
-      <SortableContext
-        items={tasks.map((t) => t.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        <ul className="space-y-1.5">
-          {tasks.map((t) => (
-            <SortableRow
-              key={t.id}
-              task={t}
-              labels={labels}
-              onToggle={() => toggleTaskStatus(t.id)}
-            />
-          ))}
-        </ul>
-      </SortableContext>
+      {body}
     </DndContext>
   );
 }
@@ -127,16 +138,10 @@ function SortableRow({
       >
         ⋮⋮
       </button>
-      <input
-        type="checkbox"
-        checked={task.status === "done"}
-        onChange={onToggle}
-        className="h-4 w-4"
-        style={{ accentColor: statusTone.token }}
-      />
       <button
         type="button"
         onClick={() => setSelected(task.id)}
+        onDoubleClick={onToggle}
         className="flex-1 text-left text-sm"
       >
         <div

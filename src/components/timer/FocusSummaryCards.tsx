@@ -101,10 +101,6 @@ export function FocusSummaryCards() {
 
   return (
     <div className="w-full max-w-3xl">
-      <div className="mb-2 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-        <FiClock aria-hidden className="text-[11px]" />
-        최근 시간 사용
-      </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <FocusCard range={today} />
         <FocusCard range={week} />

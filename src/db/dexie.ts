@@ -6,6 +6,7 @@ import type {
   DumpItem,
   Goal,
   Label,
+  PeriodReflection,
   PomodoroSession,
   Settings,
   Task,
@@ -21,6 +22,7 @@ class DoroDB extends Dexie {
   taskTemplates!: Table<TaskTemplate, string>;
   goals!: Table<Goal, string>;
   labels!: Table<Label, string>;
+  periodReflections!: Table<PeriodReflection, string>;
 
   constructor() {
     super("doro-doro");
@@ -44,6 +46,21 @@ class DoroDB extends Dexie {
     });
     this.version(5).stores({
       labels: "id, name, createdAt",
+    });
+    this.version(6)
+      .stores({
+        goals: "id, targetDate, status, updatedAt",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("goals")
+          .toCollection()
+          .modify((g: { checkpoints?: unknown }) => {
+            if (!Array.isArray(g.checkpoints)) g.checkpoints = [];
+          });
+      });
+    this.version(7).stores({
+      periodReflections: "id, [period+anchor], updatedAt",
     });
   }
 }

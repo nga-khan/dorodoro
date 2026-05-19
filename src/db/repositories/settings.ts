@@ -7,7 +7,7 @@ export async function ensureSettings(): Promise<Settings> {
   const db = getDB();
   const existing = await db.settings.get("singleton");
   if (existing) return existing;
-  await db.settings.add(DEFAULT_SETTINGS);
+  await db.settings.put(DEFAULT_SETTINGS);
   return DEFAULT_SETTINGS;
 }
 

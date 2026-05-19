@@ -7,6 +7,8 @@ import { LabelPicker } from "@/components/shell/LabelPicker";
 import { newKeyResult, newKpi } from "@/db/repositories/goals";
 import { cn } from "@/lib/cn";
 import type { Goal, GoalStatus, KeyResult, Kpi } from "@/types/domain";
+import { BackcastTimeline } from "./BackcastTimeline";
+import { STATUS_COLOR, STATUS_LABEL, STATUS_ORDER } from "./status";
 
 interface Props {
   goal: Goal;
@@ -20,12 +22,6 @@ function toLocalDate(ms: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
-const STATUS_LABEL: Record<GoalStatus, string> = {
-  active: "진행 중",
-  achieved: "달성",
-  archived: "보류",
-};
 
 export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
   const [draft, setDraft] = useState<Goal>(goal);
@@ -121,21 +117,32 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
           </label>
           <span>({format(draft.targetDate, "yyyy.MM.dd")})</span>
           <div className="ml-auto flex items-center gap-1">
-            {(["active", "achieved", "archived"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => onStatus(s)}
-                className={cn(
-                  "rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider",
-                  draft.status === s
-                    ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
-                    : "border-[var(--line)] text-[var(--ink-2)]",
-                )}
-              >
-                {STATUS_LABEL[s]}
-              </button>
-            ))}
+            {STATUS_ORDER.map((s) => {
+              const c = STATUS_COLOR[s];
+              const selected = draft.status === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onStatus(s)}
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors",
+                    selected ? "" : "border-[var(--line)] text-[var(--ink-2)]",
+                  )}
+                  style={
+                    selected
+                      ? {
+                          backgroundColor: c.bg,
+                          color: c.fg,
+                          borderColor: c.bg,
+                        }
+                      : undefined
+                  }
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
@@ -155,7 +162,7 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
           }
           rows={2}
           placeholder="이 목표가 왜 중요한가? 누구를 위해, 무엇을 바꾸려고 하는가?"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3.5 py-2.5 text-sm outline-none focus:border-[var(--ink-2)]"
         />
       </Section>
 
@@ -167,18 +174,12 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
           }
           rows={2}
           placeholder="무엇이 가로막을 것인가? 사전 차단 시나리오는?"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3.5 py-2.5 text-sm outline-none focus:border-[var(--ink-2)]"
         />
       </Section>
 
-      <Section label="PLAN — 역산 단계">
-        <textarea
-          value={draft.plan ?? ""}
-          onChange={(e) => setDraft((s) => ({ ...s, plan: e.target.value }))}
-          rows={4}
-          placeholder="목표 시점에서 거꾸로 시간을 가른다. 3개월 전 / 1개월 전 / 1주 전 / 오늘 무엇을 해야 하는가?"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
-        />
+      <Section label="BACKCAST — 역산 체크포인트">
+        <BackcastTimeline goal={goal} />
       </Section>
 
       <Section label="OKR — Objective">
@@ -188,7 +189,7 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
             setDraft((s) => ({ ...s, objective: e.target.value }))
           }
           placeholder="정성적·열망적 목적 한 문장"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-3.5 py-2.5 text-sm outline-none focus:border-[var(--ink-2)]"
         />
         <div className="mt-3 flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -198,7 +199,7 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
             <button
               type="button"
               onClick={addKr}
-              className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-2)] hover:text-[var(--ink-0)]"
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] text-[var(--ink-2)] hover:bg-[var(--bg-0)] hover:text-[var(--ink-0)]"
             >
               <FiPlus aria-hidden />
               추가
@@ -228,7 +229,7 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
           <button
             type="button"
             onClick={addKpi}
-            className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-2)] hover:text-[var(--ink-0)]"
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] text-[var(--ink-2)] hover:bg-[var(--bg-0)] hover:text-[var(--ink-0)]"
           >
             <FiPlus aria-hidden />
             추가
@@ -255,7 +256,7 @@ export function GoalEditor({ goal, onChange, onDelete, onStatus }: Props) {
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex items-center gap-1 text-xs text-[var(--ink-3)] hover:text-[var(--ink-0)]"
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--line)] px-3 py-1.5 text-xs text-[var(--ink-3)] hover:bg-[var(--bg-0)] hover:text-[var(--ink-0)]"
         >
           <FiTrash2 aria-hidden />
           목표 삭제
@@ -296,7 +297,7 @@ function KrRow({
       ? Math.min(100, Math.round(((kr.current ?? 0) / kr.target) * 100))
       : 0;
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-0)] p-2">
+    <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-0)] p-3">
       <div className="flex items-center gap-2">
         <input
           value={kr.title}
@@ -308,7 +309,7 @@ function KrRow({
           type="button"
           onClick={onRemove}
           aria-label="삭제"
-          className="rounded-md p-1 text-[var(--ink-3)] hover:bg-[var(--bg-1)]"
+          className="rounded-md p-1.5 text-[var(--ink-3)] hover:bg-[var(--bg-1)]"
         >
           <FiTrash2 aria-hidden />
         </button>
@@ -318,7 +319,7 @@ function KrRow({
           value={kr.metric ?? ""}
           onChange={(e) => onChange({ metric: e.target.value })}
           placeholder="단위 (예: 명)"
-          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1"
+          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5"
         />
         <input
           type="number"
@@ -330,7 +331,7 @@ function KrRow({
             })
           }
           placeholder="현재"
-          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1"
+          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5"
         />
         <span className="text-[var(--ink-3)]">/</span>
         <input
@@ -343,7 +344,7 @@ function KrRow({
             })
           }
           placeholder="목표"
-          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1"
+          className="w-24 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5"
         />
         <span className="ml-auto font-mono text-[var(--ink-2)]">
           {progress}%
@@ -369,7 +370,7 @@ function KpiRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-0)] p-2">
+    <div className="flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-0)] p-3">
       <input
         value={kpi.title}
         onChange={(e) => onChange({ title: e.target.value })}
@@ -385,7 +386,7 @@ function KpiRow({
           })
         }
         placeholder="현재"
-        className="w-20 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1 text-xs"
+        className="w-20 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs"
       />
       <span className="text-xs text-[var(--ink-3)]">/</span>
       <input
@@ -397,13 +398,13 @@ function KpiRow({
           })
         }
         placeholder="목표"
-        className="w-20 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1 text-xs"
+        className="w-20 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs"
       />
       <input
         value={kpi.unit ?? ""}
         onChange={(e) => onChange({ unit: e.target.value })}
         placeholder="단위"
-        className="w-16 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1 text-xs"
+        className="w-16 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs"
       />
       <button
         type="button"

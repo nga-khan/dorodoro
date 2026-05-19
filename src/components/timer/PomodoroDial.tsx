@@ -100,10 +100,13 @@ export function PomodoroDial({
         style={{ fontSize: size * 0.18, fontVariantNumeric: "tabular-nums" }}
       >
         <tspan>{mm}</tspan>
-        <tspan className={isRunning ? "animate-colon-blink" : undefined}>
+        <tspan
+          className={isRunning ? "animate-colon-blink" : undefined}
+          dy="-0.08em"
+        >
           :
         </tspan>
-        <tspan>{ss}</tspan>
+        <tspan dy="0.08em">{ss}</tspan>
       </text>
     </svg>
   );

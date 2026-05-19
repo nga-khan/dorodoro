@@ -3,14 +3,33 @@
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { FiList, FiSettings, FiTrash2 } from "react-icons/fi";
-import { deleteAllData } from "@/db/repositories/maintenance";
+import {
+  FiBookOpen,
+  FiDownload,
+  FiList,
+  FiSettings,
+  FiTrash2,
+  FiUpload,
+} from "react-icons/fi";
+import {
+  deleteAllData,
+  exportAllData,
+  importAllData,
+} from "@/db/repositories/maintenance";
 import { ThemeToggle } from "./ThemeToggle";
+
+function formatExportFilename(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `doro-doro-export-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.zip`;
+}
 
 export function SettingsMenu() {
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [busy, setBusy] = useState<"export" | "import" | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -32,6 +51,56 @@ export function SettingsMenu() {
     await deleteAllData();
     setConfirmingDelete(false);
     setOpen(false);
+  };
+
+  const handleExport = async () => {
+    if (busy) return;
+    setBusy("export");
+    try {
+      const blob = await exportAllData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = formatExportFilename();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("내보내기에 실패했습니다.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const triggerImport = () => {
+    if (busy) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy("import");
+    try {
+      const result = await importAllData(file);
+      const total = Object.values(result.counts).reduce((a, b) => a + b, 0);
+      const note = result.versionMismatch
+        ? "\n(주의: 내보낼 때와 DB 버전이 달라 일부 항목이 불일치할 수 있습니다.)"
+        : "";
+      alert(`가져오기 완료: ${total}개 항목 병합${note}`);
+      setOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert(
+        "가져오기에 실패했습니다. 유효한 doro-doro zip 파일인지 확인하세요.",
+      );
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -62,6 +131,40 @@ export function SettingsMenu() {
             >
               <FiList aria-hidden />할 일 템플릿
             </Link>
+            <Link
+              href="/histories"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-[var(--bg-1)]"
+            >
+              <FiBookOpen aria-hidden />
+              회고
+            </Link>
+            <div className="my-1 h-px bg-[var(--line)]" />
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-[var(--bg-1)] disabled:opacity-50"
+            >
+              <FiDownload aria-hidden />
+              {busy === "export" ? "내보내는 중…" : "데이터 내보내기"}
+            </button>
+            <button
+              type="button"
+              onClick={triggerImport}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-[var(--bg-1)] disabled:opacity-50"
+            >
+              <FiUpload aria-hidden />
+              {busy === "import" ? "가져오는 중…" : "데이터 업로드"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip,application/zip"
+              onChange={handleImportFile}
+              className="hidden"
+            />
             <div className="my-1 h-px bg-[var(--line)]" />
             {!confirmingDelete ? (
               <button

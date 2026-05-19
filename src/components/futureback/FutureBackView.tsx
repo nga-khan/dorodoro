@@ -8,6 +8,7 @@ import { createGoal, deleteGoal, updateGoal } from "@/db/repositories/goals";
 import { cn } from "@/lib/cn";
 import type { Goal, GoalStatus } from "@/types/domain";
 import { GoalEditor } from "./GoalEditor";
+import { STATUS_COLOR, STATUS_LABEL } from "./status";
 
 export function FutureBackView() {
   const goals = useGoals();
@@ -63,11 +64,27 @@ export function FutureBackView() {
                   )}
                 >
                   <span className="flex items-center gap-2 truncate">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: STATUS_COLOR[g.status].dot }}
+                      title={STATUS_LABEL[g.status]}
+                    />
                     <FiTarget
                       aria-hidden
                       className="shrink-0 text-[var(--ink-3)]"
                     />
-                    <span className="truncate">{g.title}</span>
+                    <span
+                      className={cn(
+                        "truncate",
+                        (g.status === "achieved" ||
+                          g.status === "failed" ||
+                          g.status === "archived") &&
+                          "text-[var(--ink-2)]",
+                      )}
+                    >
+                      {g.title}
+                    </span>
                   </span>
                   <DDay ms={g.targetDate} />
                 </button>

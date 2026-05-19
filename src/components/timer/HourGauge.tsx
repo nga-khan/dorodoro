@@ -18,7 +18,7 @@ export function HourGauge({ color, totalMs, remainingMs }: Props) {
   const currentHourProgress = 1 - remainingInHour / hourMs;
 
   return (
-    <div className="flex w-full max-w-md gap-1.5 px-2">
+    <div className="flex w-[160px] gap-1">
       {Array.from({ length: totalHours }, (_, i) => `hour-${i}`).map(
         (id, i) => {
           const filled = i < completedHours;
@@ -27,7 +27,7 @@ export function HourGauge({ color, totalMs, remainingMs }: Props) {
           return (
             <div
               key={id}
-              className="relative h-6 flex-1 overflow-hidden rounded-sm border border-[var(--line-strong)] bg-[var(--bg-1)]"
+              className="relative h-3 flex-1 overflow-hidden rounded-full border border-[var(--line-strong)] bg-[var(--bg-1)]"
               title={`hour ${i + 1} of ${totalHours}`}
             >
               <div

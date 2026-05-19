@@ -77,6 +77,20 @@ export interface PomodoroSession {
   reflection?: SessionReflection;
 }
 
+export type ReflectionPeriod = "weekly" | "monthly" | "yearly";
+
+export interface PeriodReflection {
+  id: ID;
+  period: ReflectionPeriod;
+  anchor: number;
+  wentWell?: string;
+  improvements?: string;
+  nextActions?: string;
+  satisfaction?: Satisfaction;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Settings {
   id: "singleton";
   timerColor: string;
@@ -124,7 +138,25 @@ export interface Kpi {
   current?: number;
 }
 
-export type GoalStatus = "active" | "achieved" | "archived";
+export type GoalStatus = "active" | "achieved" | "archived" | "failed";
+
+export interface CheckpointActionItem {
+  id: ID;
+  text: string;
+  done: boolean;
+  taskId?: ID;
+}
+
+export interface Checkpoint {
+  id: ID;
+  title: string;
+  date: number;
+  criteria?: string;
+  done: boolean;
+  actionItems?: CheckpointActionItem[];
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface Goal {
   id: ID;
@@ -136,6 +168,7 @@ export interface Goal {
   objective: string;
   keyResults: KeyResult[];
   kpis: Kpi[];
+  checkpoints: Checkpoint[];
   status: GoalStatus;
   labelIds?: ID[];
   createdAt: number;

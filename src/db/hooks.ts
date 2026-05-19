@@ -9,7 +9,9 @@ import type {
   DumpItem,
   Goal,
   Label,
+  PeriodReflection,
   PomodoroSession,
+  ReflectionPeriod,
   Settings,
   Task,
   TaskTemplate,
@@ -112,6 +114,32 @@ export function useGoals(): Goal[] {
     [],
     [],
   );
+}
+
+export function usePeriodReflections(): PeriodReflection[] {
+  return useClientDB(
+    async () => {
+      const rows = await getDB().periodReflections.toArray();
+      return rows.sort((a, b) => b.anchor - a.anchor);
+    },
+    [],
+    [],
+  );
+}
+
+export function usePeriodReflection(
+  period: ReflectionPeriod,
+  anchor: number,
+): PeriodReflection | null {
+  const result = useLiveQuery(async () => {
+    if (typeof window === "undefined") return null;
+    const r = await getDB()
+      .periodReflections.where("[period+anchor]")
+      .equals([period, anchor])
+      .first();
+    return r ?? null;
+  }, [period, anchor]);
+  return result ?? null;
 }
 
 export function useSettings(): Settings {
