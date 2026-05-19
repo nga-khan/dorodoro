@@ -125,6 +125,14 @@ export function SettingsMenu() {
           >
             <ThemeToggle variant="menu" onAfter={() => setOpen(false)} />
             <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-[var(--bg-1)]"
+            >
+              <FiSettings aria-hidden />
+              설정
+            </Link>
+            <Link
               href="/templates"
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-[var(--bg-1)]"

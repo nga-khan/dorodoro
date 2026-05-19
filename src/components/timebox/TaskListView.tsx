@@ -4,6 +4,8 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -16,12 +18,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 import { useLabels, useTasks } from "@/db/hooks";
 import { reorderTasks, toggleTaskStatus } from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
 import { PRIORITY_TONE, STATUS_TONE } from "@/lib/taskColors";
 import { useAppStore } from "@/stores/app";
 import type { Task } from "@/types/domain";
+import { TaskDragGhost } from "./TaskDragGhost";
 
 export function TaskListView({
   externalDnd = false,
@@ -37,7 +41,10 @@ export function TaskListView({
     }),
   );
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
   const onDragEnd = async (e: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const ids = tasks.map((t) => t.id);
@@ -76,13 +83,20 @@ export function TaskListView({
 
   if (externalDnd) return body;
 
+  const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveId(null)}
     >
       {body}
+      <DragOverlay dropAnimation={null}>
+        {activeTask ? <TaskDragGhost task={activeTask} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -109,7 +123,7 @@ function SortableRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0 : 1,
     borderLeft: `3px solid ${PRIORITY_TONE[task.priority].token}`,
   };
 

@@ -159,7 +159,7 @@ function DraggableTaskBlock({
           ? `color-mix(in srgb, ${color} 22%, var(--bg-0))`
           : "var(--bg-2)",
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0 : 1,
         cursor: draggable ? (isDragging ? "grabbing" : "grab") : "pointer",
         touchAction: "none",
         zIndex: isDragging ? 5 : 1,

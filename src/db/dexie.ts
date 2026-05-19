@@ -62,6 +62,22 @@ class DoroDB extends Dexie {
     this.version(7).stores({
       periodReflections: "id, [period+anchor], updatedAt",
     });
+    this.version(8)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table("settings")
+          .toCollection()
+          .modify((s: { notifications?: unknown }) => {
+            if (!s.notifications) {
+              s.notifications = {
+                enabled: false,
+                sound: true,
+                perPhase: { work: true, shortBreak: true, longBreak: true },
+              };
+            }
+          });
+      });
   }
 }
 
@@ -81,4 +97,9 @@ export const DEFAULT_SETTINGS: Settings = {
   cycleEnabled: false,
   cycle: { workMin: 25, shortMin: 5, longMin: 15, setsBeforeLong: 4 },
   theme: "system",
+  notifications: {
+    enabled: false,
+    sound: true,
+    perPhase: { work: true, shortBreak: true, longBreak: true },
+  },
 };

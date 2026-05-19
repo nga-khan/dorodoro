@@ -1,3 +1,9 @@
+import { format } from "date-fns";
+
+export function formatDumpTime(ms: number): string {
+  return format(new Date(ms), "yyyy-MM-dd HH:mm:ss");
+}
+
 export const TIMER_MIN = 5;
 export const TIMER_MAX = 180;
 export const TIMER_STEP = 5;

@@ -4,6 +4,8 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -18,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { useCommand } from "@/lib/shortcuts/bus";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { useAppStore } from "@/stores/app";
+import { TaskDragGhost } from "./TaskDragGhost";
 import { TaskListView } from "./TaskListView";
 import { TaskTimelineView, TIMELINE_SLOT_PREFIX } from "./TaskTimelineView";
 
@@ -36,6 +39,7 @@ export function TaskBoard() {
   const view = useAppStore((s) => s.taskBoardView);
   const setView = useAppStore((s) => s.setTaskBoardView);
   const [title, setTitle] = useState("");
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const tasks = useTasks();
@@ -59,7 +63,13 @@ export function TaskBoard() {
     await createTask({ title: v });
   };
 
+  const onDragStart = (e: DragStartEvent) => {
+    setActiveDragId(String(e.active.id));
+  };
+  const onDragCancel = () => setActiveDragId(null);
+
   const onCombinedDragEnd = async (e: DragEndEvent) => {
+    setActiveDragId(null);
     const { active, over } = e;
     if (!over) return;
     const overId = String(over.id);
@@ -142,7 +152,9 @@ export function TaskBoard() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={onDragStart}
           onDragEnd={onCombinedDragEnd}
+          onDragCancel={onDragCancel}
         >
           <div className="grid flex-1 grid-cols-2 gap-3 overflow-hidden">
             <div className="flex min-h-0 flex-col overflow-auto">
@@ -162,6 +174,14 @@ export function TaskBoard() {
               </div>
             </div>
           </div>
+          <DragOverlay dropAnimation={null}>
+            {activeDragId
+              ? (() => {
+                  const t = tasks.find((x) => x.id === activeDragId);
+                  return t ? <TaskDragGhost task={t} /> : null;
+                })()
+              : null}
+          </DragOverlay>
         </DndContext>
       ) : (
         <div className="flex-1 overflow-auto">

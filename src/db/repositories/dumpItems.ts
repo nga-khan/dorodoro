@@ -22,6 +22,15 @@ export async function deleteDumpItem(id: string): Promise<void> {
   await getDB().dumpItems.delete(id);
 }
 
+export async function deleteDumpItems(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await getDB().dumpItems.bulkDelete(ids);
+}
+
+export async function deleteAllDumpItems(): Promise<void> {
+  await getDB().dumpItems.clear();
+}
+
 export async function reorderDumpItems(ids: string[]): Promise<void> {
   const db = getDB();
   await db.transaction("rw", db.dumpItems, async () => {
@@ -31,10 +40,29 @@ export async function reorderDumpItems(ids: string[]): Promise<void> {
   });
 }
 
-export async function promoteDumpToTask(id: string): Promise<void> {
+export async function promoteDumpToTask(
+  id: string,
+): Promise<string | undefined> {
   const db = getDB();
   const item = await db.dumpItems.get(id);
-  if (!item) return;
+  if (!item) return undefined;
   const task = await createTask({ title: item.text });
-  await db.dumpItems.update(id, { promotedTaskId: task.id });
+  await db.dumpItems.delete(id);
+  return task.id;
+}
+
+export async function demoteTaskToDump(taskId: string): Promise<void> {
+  const db = getDB();
+  const task = await db.tasks.get(taskId);
+  if (!task) return;
+  const order = (await db.dumpItems.count()) + 1;
+  await db.transaction("rw", db.tasks, db.dumpItems, async () => {
+    await db.dumpItems.add({
+      id: nanoid(),
+      text: task.title,
+      createdAt: Date.now(),
+      order,
+    });
+    await db.tasks.delete(taskId);
+  });
 }

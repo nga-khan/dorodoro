@@ -2,9 +2,10 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { FiCheckSquare, FiTrash2 } from "react-icons/fi";
+import { FiCheckSquare, FiInbox, FiSave, FiTrash2 } from "react-icons/fi";
 import { LabelPicker } from "@/components/shell/LabelPicker";
 import { useTasks } from "@/db/hooks";
+import { demoteTaskToDump } from "@/db/repositories/dumpItems";
 import { deleteTask, updateTask } from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
 import { useCommand } from "@/lib/shortcuts/bus";
@@ -233,17 +234,52 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
         />
       </Field>
 
-      <button
-        type="button"
-        onClick={async () => {
-          await deleteTask(task.id);
-          onClose();
-        }}
-        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--danger-border)] bg-[var(--danger-bg)] px-2.5 py-1.5 text-xs text-[var(--danger-ink)] hover:bg-[color-mix(in_oklab,var(--danger-bg)_70%,var(--danger)_30%)]"
-      >
-        <FiTrash2 aria-hidden />
-        Task 삭제
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (
+                typeof window !== "undefined" &&
+                !window.confirm("이 Task를 삭제할까요?")
+              )
+                return;
+              await deleteTask(task.id);
+              onClose();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--danger-border)] bg-[var(--danger-bg)] px-2.5 py-1.5 text-xs text-[var(--danger-ink)] hover:bg-[color-mix(in_oklab,var(--danger-bg)_70%,var(--danger)_30%)]"
+          >
+            <FiTrash2 aria-hidden />
+            Task 삭제
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (
+                typeof window !== "undefined" &&
+                !window.confirm(
+                  "이 Task를 Dump로 되돌릴까요? 일정·라벨 등 메타데이터는 사라집니다.",
+                )
+              )
+                return;
+              await demoteTaskToDump(task.id);
+              onClose();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
+          >
+            <FiInbox aria-hidden />
+            다시 Dump로
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => void commitAndClose()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ink-0)] px-3 py-1.5 text-xs text-[var(--bg-0)] hover:opacity-90"
+        >
+          <FiSave aria-hidden />
+          저장
+        </button>
+      </div>
     </div>
   );
 }

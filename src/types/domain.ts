@@ -91,6 +91,16 @@ export interface PeriodReflection {
   updatedAt: number;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  sound: boolean;
+  perPhase: {
+    work: boolean;
+    shortBreak: boolean;
+    longBreak: boolean;
+  };
+}
+
 export interface Settings {
   id: "singleton";
   timerColor: string;
@@ -102,6 +112,7 @@ export interface Settings {
     setsBeforeLong: number;
   };
   theme: "system" | "light" | "dark";
+  notifications: NotificationSettings;
 }
 
 export type CalendarItem =

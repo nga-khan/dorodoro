@@ -6,6 +6,7 @@ import {
   setSessionReflection,
   startSession,
 } from "@/db/repositories/sessions";
+import { notifyPhaseEnd } from "@/lib/notify";
 import type {
   PomodoroPhase,
   SessionReflection,
@@ -92,6 +93,14 @@ export function useTimerEngine({
     void (async () => {
       if (state.sessionId) await finishSession(state.sessionId, true);
       const pending = state.phase === "work" ? state.sessionId : null;
+      const n = settings.notifications;
+      if (n?.enabled && n.perPhase[state.phase]) {
+        notifyPhaseEnd({
+          phase: state.phase,
+          enabled: n.enabled,
+          sound: n.sound,
+        });
+      }
       setState((s) => ({
         ...s,
         status: "completed",
@@ -100,7 +109,13 @@ export function useTimerEngine({
           s.phase === "work" ? s.completedSets + 1 : s.completedSets,
       }));
     })();
-  }, [state.status, state.remainingMs, state.sessionId, state.phase]);
+  }, [
+    state.status,
+    state.remainingMs,
+    state.sessionId,
+    state.phase,
+    settings.notifications,
+  ]);
 
   const phaseDurationMs = useCallback(
     (phase: PomodoroPhase): number => {
