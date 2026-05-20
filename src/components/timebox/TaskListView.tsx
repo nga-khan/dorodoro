@@ -29,10 +29,16 @@ import { TaskDragGhost } from "./TaskDragGhost";
 
 export function TaskListView({
   externalDnd = false,
+  showOnly = "active",
 }: {
   externalDnd?: boolean;
+  showOnly?: "active" | "done";
 } = {}) {
-  const tasks = useTasks();
+  const allTasks = useTasks();
+  const tasks =
+    showOnly === "done"
+      ? allTasks.filter((t) => t.status === "done")
+      : allTasks.filter((t) => t.status !== "done");
   const labels = useLabels();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -58,7 +64,9 @@ export function TaskListView({
   if (tasks.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-xs text-[var(--ink-3)]">
-        아직 Task가 없어요. Dump에서 승격하거나 직접 추가해보세요.
+        {showOnly === "done"
+          ? "완료된 Task가 아직 없어요."
+          : "아직 Task가 없어요. Dump에서 승격하거나 직접 추가해보세요."}
       </div>
     );
   }

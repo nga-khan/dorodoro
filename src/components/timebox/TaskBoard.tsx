@@ -13,7 +13,14 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { type FormEvent, useCallback, useRef, useState } from "react";
-import { FiCalendar, FiCheckSquare, FiList } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiCheck,
+  FiCheckSquare,
+  FiChevronDown,
+  FiChevronUp,
+  FiList,
+} from "react-icons/fi";
 import { useTasks } from "@/db/hooks";
 import { createTask, reorderTasks, updateTask } from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
@@ -40,9 +47,11 @@ export function TaskBoard() {
   const setView = useAppStore((s) => s.setTaskBoardView);
   const [title, setTitle] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const tasks = useTasks();
+  const completedCount = tasks.filter((t) => t.status === "done").length;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
@@ -148,46 +157,72 @@ export function TaskBoard() {
         />
       </form>
 
-      {isDesktop ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={onDragStart}
-          onDragEnd={onCombinedDragEnd}
-          onDragCancel={onDragCancel}
-        >
-          <div className="grid flex-1 grid-cols-2 gap-3 overflow-hidden">
-            <div className="flex min-h-0 flex-col overflow-auto">
-              <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-                <FiList aria-hidden />
-                목록
-              </div>
-              <TaskListView externalDnd />
-            </div>
-            <div className="flex min-h-0 flex-col overflow-hidden">
-              <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-                <FiCalendar aria-hidden />
-                타임라인 · 드롭해서 시간 배정
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <TaskTimelineView droppable />
-              </div>
-            </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {completedExpanded ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+            <TaskListView showOnly="done" />
           </div>
-          <DragOverlay dropAnimation={null}>
-            {activeDragId
-              ? (() => {
-                  const t = tasks.find((x) => x.id === activeDragId);
-                  return t ? <TaskDragGhost task={t} /> : null;
-                })()
-              : null}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          {view === "list" ? <TaskListView /> : <TaskTimelineView />}
-        </div>
-      )}
+        ) : isDesktop ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={onDragStart}
+            onDragEnd={onCombinedDragEnd}
+            onDragCancel={onDragCancel}
+          >
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-hidden">
+              <div className="flex min-h-0 flex-col overflow-auto">
+                <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
+                  <FiList aria-hidden />
+                  목록
+                </div>
+                <TaskListView externalDnd />
+              </div>
+              <div className="flex min-h-0 flex-col overflow-hidden">
+                <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
+                  <FiCalendar aria-hidden />
+                  타임라인 · 드롭해서 시간 배정
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <TaskTimelineView droppable />
+                </div>
+              </div>
+            </div>
+            <DragOverlay dropAnimation={null}>
+              {activeDragId
+                ? (() => {
+                    const t = tasks.find((x) => x.id === activeDragId);
+                    return t ? <TaskDragGhost task={t} /> : null;
+                  })()
+                : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-auto">
+            {view === "list" ? <TaskListView /> : <TaskTimelineView />}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setCompletedExpanded((v) => !v)}
+          className={cn(
+            "mt-3 flex w-full shrink-0 items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--bg-1)] px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-3)] transition-colors hover:bg-[var(--bg-2)] hover:text-[var(--ink-1)]",
+            completedExpanded && "bg-[var(--bg-2)] text-[var(--ink-1)]",
+          )}
+          aria-expanded={completedExpanded}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <FiCheck aria-hidden />
+            완료 목록 · {completedCount}
+          </span>
+          {completedExpanded ? (
+            <FiChevronUp aria-hidden />
+          ) : (
+            <FiChevronDown aria-hidden />
+          )}
+        </button>
+      </div>
     </div>
   );
 }

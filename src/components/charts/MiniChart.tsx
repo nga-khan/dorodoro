@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/cn";
+
 interface SparkProps {
   values: number[];
   width?: number;
@@ -102,12 +104,29 @@ export function MiniBars({
         })}
       </div>
       {labels && (
-        <div className="mt-1 flex gap-1 text-[9px] text-[var(--ink-3)]">
-          {labels.map((l, i) => (
-            <span key={`lbl-${i}-${l}`} className="flex-1 text-center">
-              {l}
-            </span>
-          ))}
+        <div className="mt-1 flex gap-1 overflow-hidden text-[9px] tabular-nums text-[var(--ink-3)]">
+          {(() => {
+            const n = labels.length;
+            const maxVisible = 6;
+            const step = n > maxVisible ? Math.ceil(n / maxVisible) : 1;
+            return labels.map((l, i) => {
+              const show = i === 0 || i === n - 1 || i % step === 0;
+              const align =
+                i === 0
+                  ? "text-left"
+                  : i === n - 1
+                    ? "text-right"
+                    : "text-center";
+              return (
+                <span
+                  key={`lbl-${i}-${l}`}
+                  className={cn("min-w-0 flex-1 truncate", align)}
+                >
+                  {show ? l : ""}
+                </span>
+              );
+            });
+          })()}
         </div>
       )}
     </div>

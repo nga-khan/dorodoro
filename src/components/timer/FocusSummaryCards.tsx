@@ -100,13 +100,29 @@ export function FocusSummaryCards() {
   const [today, week, month] = computeRanges(now);
 
   return (
-    <div className="w-full max-w-3xl">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <FocusCard range={today} />
-        <FocusCard range={week} />
-        <FocusCard range={month} />
+    <div className="flex w-full max-w-3xl flex-col gap-3">
+      <FocusCard range={today} />
+      <div className="flex flex-col gap-1.5 px-1 text-[12px] text-[var(--ink-2)] sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-1">
+        <FocusRow range={week} />
+        <FocusRow range={month} />
       </div>
     </div>
+  );
+}
+
+function FocusRow({ range }: { range: Range }) {
+  const sessions = useSessionsInRange(range.start, range.end);
+  const { totalMs, count } = focusStats(sessions);
+  const { Icon } = range;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Icon aria-hidden className="text-[12px] text-[var(--ink-3)]" />
+      <span className="text-[var(--ink-3)]">{range.label} 집중시간</span>
+      <span className="font-mono tabular-nums text-[var(--ink-0)]">
+        {totalMs > 0 ? formatDuration(totalMs) : "0분"}
+      </span>
+      <span className="text-[var(--ink-3)]">· 완료 {count}세션</span>
+    </span>
   );
 }
 
