@@ -22,13 +22,19 @@ import {
   FiList,
 } from "react-icons/fi";
 import { useTasks } from "@/db/hooks";
-import { createTask, reorderTasks, updateTask } from "@/db/repositories/tasks";
+import {
+  createTask,
+  moveTaskToStatus,
+  reorderTasks,
+  updateTask,
+} from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
 import { useCommand } from "@/lib/shortcuts/bus";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { useAppStore } from "@/stores/app";
 import { TaskDragGhost } from "./TaskDragGhost";
 import { TaskListView } from "./TaskListView";
+import { STATUS_LANE_PREFIX, TaskStatusBoard } from "./TaskStatusBoard";
 import { TaskTimelineView, TIMELINE_SLOT_PREFIX } from "./TaskTimelineView";
 
 const SLOT_MIN = 30;
@@ -91,12 +97,31 @@ export function TaskBoard() {
       }
       return;
     }
+    if (overId.startsWith(STATUS_LANE_PREFIX)) {
+      const status = overId.slice(STATUS_LANE_PREFIX.length) as
+        | "todo"
+        | "doing"
+        | "done";
+      await moveTaskToStatus(activeId, status);
+      return;
+    }
     if (activeId === overId) return;
-    const ids = tasks.map((t) => t.id);
-    const oldIndex = ids.indexOf(activeId);
-    const newIndex = ids.indexOf(overId);
+    const activeTask = tasks.find((t) => t.id === activeId);
+    const overTask = tasks.find((t) => t.id === overId);
+    if (!activeTask || !overTask) return;
+    // Cross-lane drop on a card: switch status to that lane's status.
+    if (activeTask.status !== overTask.status) {
+      await moveTaskToStatus(activeId, overTask.status);
+      return;
+    }
+    // Same lane: reorder within the lane.
+    const laneIds = tasks
+      .filter((t) => t.status === activeTask.status && t.parentId == null)
+      .map((t) => t.id);
+    const oldIndex = laneIds.indexOf(activeId);
+    const newIndex = laneIds.indexOf(overId);
     if (oldIndex < 0 || newIndex < 0) return;
-    await reorderTasks(arrayMove(ids, oldIndex, newIndex));
+    await reorderTasks(arrayMove(laneIds, oldIndex, newIndex));
   };
 
   return (
@@ -170,18 +195,20 @@ export function TaskBoard() {
             onDragEnd={onCombinedDragEnd}
             onDragCancel={onDragCancel}
           >
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-hidden">
-              <div className="flex min-h-0 flex-col overflow-auto">
+            <div className="grid min-h-0 flex-1 grid-cols-[2.4fr_1fr] gap-3 overflow-hidden">
+              <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
                   <FiList aria-hidden />
-                  목록
+                  목록 · 드래그해서 상태 변경
                 </div>
-                <TaskListView externalDnd />
+                <div className="flex-1 overflow-hidden">
+                  <TaskStatusBoard />
+                </div>
               </div>
               <div className="flex min-h-0 flex-col overflow-hidden">
                 <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
                   <FiCalendar aria-hidden />
-                  타임라인 · 드롭해서 시간 배정
+                  타임라인
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <TaskTimelineView droppable />

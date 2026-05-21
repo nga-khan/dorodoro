@@ -70,6 +70,33 @@ export async function reorderTasks(orderedIds: string[]): Promise<void> {
   });
 }
 
+/**
+ * Move a task to the end of a status lane. Cheap path for cross-lane drops.
+ */
+export async function moveTaskToStatus(
+  id: string,
+  status: TaskStatus,
+): Promise<void> {
+  const db = getDB();
+  const t = await db.tasks.get(id);
+  if (!t || t.status === status) {
+    if (t && t.status !== status) {
+      await db.tasks.update(id, { status, updatedAt: now() });
+    }
+    return;
+  }
+  const peers = await db.tasks.where("status").equals(status).toArray();
+  const maxOrder = peers.reduce((m, p) => (p.order > m ? p.order : m), 0);
+  await db.tasks.update(id, {
+    status,
+    order: maxOrder + 1,
+    updatedAt: now(),
+  });
+  if (status === "done" && t.rrule) {
+    await spawnNextRecurrence(t);
+  }
+}
+
 export async function toggleTaskStatus(id: string): Promise<void> {
   const db = getDB();
   const t = await db.tasks.get(id);

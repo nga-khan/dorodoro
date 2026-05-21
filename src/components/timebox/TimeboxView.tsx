@@ -62,7 +62,7 @@ export function TimeboxView() {
   }
 
   return (
-    <section className="grid h-[calc(100vh-160px)] grid-cols-2 grid-rows-[7fr_3fr] gap-3">
+    <section className="grid h-[calc(100vh-160px)] grid-cols-[minmax(260px,340px)_1fr] grid-rows-[7fr_3fr] gap-3">
       <div className="row-span-2">
         <DumpColumn />
       </div>

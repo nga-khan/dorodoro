@@ -66,7 +66,7 @@ function AppShellInner() {
     <div className="flex flex-col flex-1 min-h-screen bg-[var(--bg-0)] text-[var(--ink-0)]">
       {!isMobile && (
         <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--bg-0)]/85 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+          <div className="mx-auto flex w-full max-w-screen-2xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
               <Logo height={24} priority />
               <span className="font-mono text-sm tracking-tight text-[var(--ink-1)]">
@@ -140,7 +140,7 @@ function AppShellInner() {
 
       <main
         className={cn(
-          "flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-4 sm:py-6",
+          "flex-1 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 py-4 sm:py-6",
           isMobile && "pb-[calc(72px+var(--safe-bottom))]",
         )}
       >
