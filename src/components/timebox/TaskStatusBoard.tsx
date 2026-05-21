@@ -125,6 +125,8 @@ function LaneCard({
     transform,
     transition,
     isDragging,
+    isOver,
+    active,
   } = useSortable({ id: task.id });
   const setSelected = useAppStore((s) => s.setSelectedTaskId);
   const prio = PRIORITY_TONE[task.priority];
@@ -137,68 +139,70 @@ function LaneCard({
         : tone === "soon"
           ? "var(--priority-p2)"
           : "var(--ink-2)";
-  const overdue = tone === "overdue";
   const taskLabels = (task.labelIds ?? [])
     .map((id) => labels.find((l) => l.id === id))
     .filter((l): l is { id: string; name: string; color: string } => !!l);
+  const showIndicator = isOver && active != null && active.id !== task.id;
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
-    borderLeft: `3px solid ${prio.token}`,
-    ...(overdue ? { boxShadow: "inset 3px 0 0 0 var(--danger-ink)" } : null),
   };
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group flex flex-col gap-1 rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-2 py-1.5",
-        task.status === "done" && "opacity-60",
+    <li ref={setNodeRef} style={style} className="relative">
+      {showIndicator && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-1 left-0 right-0 h-0.5 rounded-full bg-[var(--ink-0)]"
+        />
       )}
-    >
-      <div className="flex items-start gap-1.5">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="mt-0.5 cursor-grab touch-none text-[var(--ink-4)] hover:text-[var(--ink-2)]"
-          aria-label="drag"
-        >
-          ⋮⋮
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelected(task.id)}
-          onDoubleClick={() => void toggleTaskStatus(task.id)}
-          className={cn(
-            "min-w-0 flex-1 text-left text-xs",
-            task.status === "done" && "text-[var(--ink-3)] line-through",
-          )}
-          title={task.title}
-        >
-          <span className="line-clamp-2 break-words">{task.title}</span>
-        </button>
-      </div>
-      {(taskLabels.length > 0 || task.due || task.rrule) && (
-        <div className="flex flex-wrap items-center gap-1 pl-5 text-[9px]">
+      <div
+        className={cn(
+          "group flex flex-col gap-1 rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-2 py-1.5",
+          task.status === "done" && "opacity-60",
+        )}
+      >
+        <div className="flex items-start gap-1.5">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="mt-0.5 cursor-grab touch-none text-[var(--ink-4)] hover:text-[var(--ink-2)]"
+            aria-label="drag"
+          >
+            ⋮⋮
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(task.id)}
+            onDoubleClick={() => void toggleTaskStatus(task.id)}
+            className={cn(
+              "min-w-0 flex-1 text-left text-xs",
+              task.status === "done" && "text-[var(--ink-3)] line-through",
+            )}
+            title={task.title}
+          >
+            <span className="line-clamp-2 break-words">{task.title}</span>
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-1 pl-5 text-[10px]">
           <span
-            className="rounded-full px-1.5 py-0.5 font-medium"
+            className="rounded-full px-1.5 py-0.5"
             style={{
               color: prio.token,
-              background: `color-mix(in oklab, ${prio.token} 16%, transparent)`,
+              background: `color-mix(in oklab, ${prio.token} 18%, transparent)`,
             }}
           >
-            {prio.short}
+            {prio.short} · {prio.label}
           </span>
           {task.due && (
             <span
               className="rounded-full px-1.5 py-0.5"
               style={{
                 color: dueColor,
-                background: `color-mix(in oklab, ${dueColor} 16%, transparent)`,
+                background: `color-mix(in oklab, ${dueColor} 18%, transparent)`,
               }}
               title={`마감 ${task.due}`}
             >
@@ -215,19 +219,35 @@ function LaneCard({
             </span>
           )}
           {taskLabels.length > 0 && (
-            <span
-              className="rounded-full px-1.5 py-0.5"
-              style={{
-                color: taskLabels[0].color,
-                background: `color-mix(in oklab, ${taskLabels[0].color} 16%, transparent)`,
-              }}
-            >
-              {taskLabels[0].name}
-              {taskLabels.length > 1 && ` +${taskLabels.length - 1}`}
+            <span className="inline-flex items-center gap-1.5">
+              <span className="flex items-center">
+                {taskLabels.map((l, i) => (
+                  <span
+                    key={l.id}
+                    title={l.name}
+                    className="inline-block h-3 w-3 rounded-full border border-[var(--bg-0)]"
+                    style={{
+                      background: l.color,
+                      marginLeft: i === 0 ? 0 : -6,
+                      zIndex: taskLabels.length - i,
+                    }}
+                  />
+                ))}
+              </span>
+              <span
+                className="rounded-full px-1.5 py-0.5"
+                style={{
+                  color: taskLabels[0].color,
+                  background: `color-mix(in oklab, ${taskLabels[0].color} 18%, transparent)`,
+                }}
+              >
+                {taskLabels[0].name}
+                {taskLabels.length > 1 && ` +${taskLabels.length - 1}`}
+              </span>
             </span>
           )}
         </div>
-      )}
+      </div>
     </li>
   );
 }
