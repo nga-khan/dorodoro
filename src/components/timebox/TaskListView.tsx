@@ -132,7 +132,6 @@ function SortableRow({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
-    borderLeft: `3px solid ${PRIORITY_TONE[task.priority].token}`,
   };
 
   const taskLabels = (task.labelIds ?? [])
@@ -208,8 +207,12 @@ function SortableRow({
       </button>
       {task.color && (
         <span
-          className="h-2.5 w-2.5 rounded-full border border-[var(--line-strong)]"
-          style={{ background: task.color }}
+          title="할당 색상"
+          className="inline-block h-3 w-6 shrink-0 rounded-full"
+          style={{
+            background: `color-mix(in oklab, ${task.color} 24%, transparent)`,
+            boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${task.color} 55%, transparent)`,
+          }}
         />
       )}
     </li>
