@@ -405,6 +405,8 @@ function EventBlock({
   dragging?: boolean;
 }) {
   const isEvent = item.kind === "event";
+  const preActions = isEvent ? (item.data.preActions ?? []) : [];
+  const preDone = preActions.filter((p) => p.done).length;
   return (
     <div
       data-event-block
@@ -422,7 +424,19 @@ function EventBlock({
         zIndex: dragging ? 5 : 1,
       }}
     >
-      <div className="truncate font-medium">{item.data.title}</div>
+      <div className="flex items-center gap-1">
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {item.data.title}
+        </span>
+        {preActions.length > 0 && (
+          <span
+            title={`사전 액션 ${preDone}/${preActions.length}`}
+            className="shrink-0 rounded-full bg-[var(--bg-0)]/40 px-1.5 py-px text-[9px] tabular-nums text-[var(--ink-2)]"
+          >
+            ✓ {preDone}/{preActions.length}
+          </span>
+        )}
+      </div>
       <div className="truncate text-[9px] text-[var(--ink-3)]">
         {format(start, "HH:mm")} – {format(end, "HH:mm")}
       </div>
@@ -589,15 +603,28 @@ export function MonthView({
               <div className="mt-1 flex flex-1 flex-col gap-0.5 overflow-hidden">
                 {dayItems.slice(0, 3).map((it) => {
                   const color = resolveEventColor(it, labelMap);
+                  const pre =
+                    it.kind === "event" ? (it.data.preActions ?? []) : [];
+                  const preDone = pre.filter((p) => p.done).length;
                   return (
                     <button
                       key={`${it.kind}-${it.data.id}`}
                       type="button"
                       onClick={() => onItemClick(it.kind, it.data.id)}
-                      className="truncate rounded-md px-2 py-1 text-left text-[10px]"
+                      className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-left text-[10px]"
                       style={eventBlockStyle(color)}
                     >
-                      {it.data.title}
+                      <span className="min-w-0 flex-1 truncate">
+                        {it.data.title}
+                      </span>
+                      {pre.length > 0 && (
+                        <span
+                          title={`사전 액션 ${preDone}/${pre.length}`}
+                          className="shrink-0 rounded-full bg-[var(--bg-0)]/40 px-1 text-[9px] tabular-nums text-[var(--ink-2)]"
+                        >
+                          ✓ {preDone}/{pre.length}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
