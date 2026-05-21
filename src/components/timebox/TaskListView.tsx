@@ -172,12 +172,12 @@ function SortableRow({
         >
           {task.title}
         </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wider">
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px]">
           <span
-            className="rounded-full px-1.5 py-0.5 font-medium"
+            className="rounded-full px-1.5 py-0.5"
             style={{
               color: prioTone.token,
-              background: `color-mix(in oklab, ${prioTone.token} 16%, transparent)`,
+              background: `color-mix(in oklab, ${prioTone.token} 18%, transparent)`,
             }}
           >
             {prioTone.short} · {prioTone.label}
@@ -186,7 +186,7 @@ function SortableRow({
             className="rounded-full px-1.5 py-0.5"
             style={{
               color: statusTone.token,
-              background: `color-mix(in oklab, ${statusTone.token} 16%, transparent)`,
+              background: `color-mix(in oklab, ${statusTone.token} 18%, transparent)`,
             }}
           >
             {statusTone.label}
@@ -208,7 +208,7 @@ function SortableRow({
                 ))}
               </span>
               <span
-                className="rounded-full px-1.5 py-0.5 normal-case tracking-normal"
+                className="rounded-full px-1.5 py-0.5"
                 style={{
                   color: taskLabels[0].color,
                   background: `color-mix(in oklab, ${taskLabels[0].color} 18%, transparent)`,
