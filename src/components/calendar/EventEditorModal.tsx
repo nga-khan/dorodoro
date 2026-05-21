@@ -48,7 +48,6 @@ export function EventEditorModal({
   const [startStr, setStartStr] = useState(toLocalDT(initial.start));
   const [endStr, setEndStr] = useState(toLocalDT(initial.end));
   const [description, setDescription] = useState(initial.description ?? "");
-  const [color, setColor] = useState(initial.color ?? "#111111");
   const [labelIds, setLabelIds] = useState<string[]>(initial.labelIds ?? []);
 
   // Recurrence editor state.
@@ -72,7 +71,6 @@ export function EventEditorModal({
     setStartStr(toLocalDT(initial.start));
     setEndStr(toLocalDT(initial.end));
     setDescription(initial.description ?? "");
-    setColor(initial.color ?? "#111111");
     setLabelIds(initial.labelIds ?? []);
     setRecurrenceEnabled(false);
     setFreq("weekly");
@@ -118,7 +116,6 @@ export function EventEditorModal({
     initial.start,
     initial.end,
     initial.description,
-    initial.color,
     initial.labelIds,
     initial.preActions,
   ]);
@@ -142,13 +139,12 @@ export function EventEditorModal({
         start,
         end,
         description,
-        color,
         labelIds,
         rrule,
         preActions,
       });
     } else {
-      await createEvent({ title, start, end, description, color });
+      await createEvent({ title, start, end, description });
       // createEvent doesn't accept rrule/labelIds/preActions directly; patch after create if needed.
       if (rrule || labelIds.length > 0 || preActions.length > 0) {
         const all = await getDB().events.toArray();
@@ -326,15 +322,6 @@ export function EventEditorModal({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <DTField label="시작" value={startStr} onChange={setStartStr} />
               <DTField label="종료" value={endStr} onChange={setEndStr} />
-            </div>
-            <div className="mt-3 grid grid-cols-[auto_1fr] items-center gap-3 text-xs">
-              <span className="text-[var(--ink-3)]">색상</span>
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="h-8 w-16 rounded-md border border-[var(--line-strong)] bg-transparent"
-              />
             </div>
             <div className="mt-3 text-xs">
               <span className="mb-1 block text-[var(--ink-3)]">라벨</span>

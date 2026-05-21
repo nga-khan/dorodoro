@@ -236,48 +236,42 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
             })}
           </div>
         </Field>
-        <Field label="색상">
-          <input
-            type="color"
-            value={task.color ?? "#111111"}
-            onChange={(e) => save({ color: e.target.value })}
-            className="h-8 w-full rounded-md border border-[var(--line-strong)] bg-transparent"
-          />
-        </Field>
-        <Field label="시작 시각">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <input
-              type="datetime-local"
-              value={task.start ? toLocalDT(task.start) : ""}
-              onChange={(e) =>
-                save({
-                  start: e.target.value
-                    ? new Date(e.target.value).getTime()
-                    : undefined,
-                })
-              }
-              className="min-w-0 flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5"
-            />
-            <div className="flex flex-wrap gap-1">
-              {(
-                [
-                  { label: "지금", offset: 0 },
-                  { label: "+1h", offset: 60 * 60_000 },
-                  { label: "+4h", offset: 4 * 60 * 60_000 },
-                ] as const
-              ).map((q) => (
-                <button
-                  key={q.label}
-                  type="button"
-                  onClick={() => save({ start: Date.now() + q.offset })}
-                  className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:bg-[var(--bg-2)] hover:text-[var(--ink-0)]"
-                >
-                  {q.label}
-                </button>
-              ))}
+        <div className="col-span-2">
+          <Field label="시작 시각">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <input
+                type="datetime-local"
+                value={task.start ? toLocalDT(task.start) : ""}
+                onChange={(e) =>
+                  save({
+                    start: e.target.value
+                      ? new Date(e.target.value).getTime()
+                      : undefined,
+                  })
+                }
+                className="min-w-0 flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5"
+              />
+              <div className="flex flex-wrap gap-1">
+                {(
+                  [
+                    { label: "지금", offset: 0 },
+                    { label: "+1h", offset: 60 * 60_000 },
+                    { label: "+4h", offset: 4 * 60 * 60_000 },
+                  ] as const
+                ).map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => save({ start: Date.now() + q.offset })}
+                    className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:bg-[var(--bg-2)] hover:text-[var(--ink-0)]"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </Field>
+          </Field>
+        </div>
       </div>
 
       <Field label="라벨">

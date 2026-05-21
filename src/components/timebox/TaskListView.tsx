@@ -191,25 +191,34 @@ function SortableRow({
           >
             {statusTone.label}
           </span>
-          {task.color && (
-            <span
-              title="할당 색상"
-              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-[var(--line-strong)]"
-              style={{ background: task.color }}
-            />
-          )}
-          {taskLabels.map((l) => (
-            <span
-              key={l.id}
-              className="rounded-full px-1.5 py-0.5 normal-case tracking-normal"
-              style={{
-                color: l.color,
-                background: `color-mix(in oklab, ${l.color} 18%, transparent)`,
-              }}
-            >
-              {l.name}
+          {taskLabels.length > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="flex items-center">
+                {taskLabels.map((l, i) => (
+                  <span
+                    key={l.id}
+                    title={l.name}
+                    className="inline-block h-3 w-3 rounded-full border border-[var(--bg-0)]"
+                    style={{
+                      background: l.color,
+                      marginLeft: i === 0 ? 0 : -6,
+                      zIndex: taskLabels.length - i,
+                    }}
+                  />
+                ))}
+              </span>
+              <span
+                className="rounded-full px-1.5 py-0.5 normal-case tracking-normal"
+                style={{
+                  color: taskLabels[0].color,
+                  background: `color-mix(in oklab, ${taskLabels[0].color} 18%, transparent)`,
+                }}
+              >
+                {taskLabels[0].name}
+                {taskLabels.length > 1 && ` +${taskLabels.length - 1}`}
+              </span>
             </span>
-          ))}
+          )}
         </div>
       </button>
     </li>
