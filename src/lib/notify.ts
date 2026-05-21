@@ -83,3 +83,27 @@ export function notifyPhaseEnd({ phase, enabled, sound }: NotifyParams): void {
     /* ignore */
   }
 }
+
+export interface ReminderParams {
+  title: string;
+  body?: string;
+  tag: string;
+  sound?: boolean;
+}
+
+/** Fire a generic reminder notification. No-op without permission. */
+export function notifyReminder({
+  title,
+  body,
+  tag,
+  sound = false,
+}: ReminderParams): void {
+  if (sound) playBeep();
+  if (!supportsNotifications()) return;
+  if (Notification.permission !== "granted") return;
+  try {
+    new Notification(title, { body, tag, silent: !sound });
+  } catch {
+    /* ignore */
+  }
+}

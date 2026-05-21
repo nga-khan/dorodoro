@@ -107,6 +107,19 @@ export function useSessionsInRange(
   );
 }
 
+export function useSessionsForTask(
+  taskId: string | null | undefined,
+): PomodoroSession[] {
+  return useClientDB(
+    async () => {
+      if (!taskId) return [];
+      return getDB().sessions.where("taskId").equals(taskId).toArray();
+    },
+    [taskId],
+    [],
+  );
+}
+
 export function useTaskTemplates(): TaskTemplate[] {
   return useClientDB(
     () => getDB().taskTemplates.orderBy("updatedAt").reverse().toArray(),

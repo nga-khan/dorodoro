@@ -3,7 +3,7 @@
 import { nanoid } from "nanoid";
 import { getDB } from "@/db/dexie";
 import { createTask } from "@/db/repositories/tasks";
-import type { DumpItem } from "@/types/domain";
+import type { DumpItem, Priority } from "@/types/domain";
 
 export async function createDumpItem(text: string): Promise<DumpItem> {
   const db = getDB();
@@ -42,11 +42,25 @@ export async function reorderDumpItems(ids: string[]): Promise<void> {
 
 export async function promoteDumpToTask(
   id: string,
+  overrides?: {
+    priority?: Priority;
+    due?: string;
+    estimateMin?: number;
+    labelIds?: string[];
+  },
 ): Promise<string | undefined> {
   const db = getDB();
   const item = await db.dumpItems.get(id);
   if (!item) return undefined;
-  const task = await createTask({ title: item.text });
+  const task = await createTask({
+    title: item.text,
+    priority: overrides?.priority,
+    due: overrides?.due,
+    estimateMin: overrides?.estimateMin,
+  });
+  if (overrides?.labelIds && overrides.labelIds.length > 0) {
+    await db.tasks.update(task.id, { labelIds: overrides.labelIds });
+  }
   await db.dumpItems.delete(id);
   return task.id;
 }

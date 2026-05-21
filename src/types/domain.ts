@@ -21,11 +21,27 @@ export interface Task {
   parentId?: ID;
   start?: number;
   end?: number;
+  /** Date-only deadline in `YYYY-MM-DD` (local). Used to flag overdue tasks. */
+  due?: string;
+  /** Self-reported estimate in minutes. Compared against summed `work` sessions. */
+  estimateMin?: number;
+  /** Recurrence rule shared with events. On completion, the next occurrence is generated. */
+  rrule?: RecurrenceRule;
   color?: string;
   labelIds?: ID[];
+  /** Captured after the task is marked done. Drives learning-loop signals. */
+  reflection?: TaskReflection;
   createdAt: number;
   updatedAt: number;
   order: number;
+}
+
+export interface TaskReflection {
+  note?: string;
+  satisfaction?: Satisfaction;
+  /** Actual minutes the user reports (independent from pomodoro session sum). */
+  actualMin?: number;
+  recordedAt: number;
 }
 
 export interface DumpItem {
@@ -65,6 +81,8 @@ export interface CalendarEvent {
   rrule?: RecurrenceRule;
   exDates?: number[]; // excluded occurrence start times (ms)
   preActions?: PreAction[];
+  /** Minutes before `start` to fire a reminder notification. Omit/0 to disable. */
+  reminderMin?: number;
 }
 
 export interface SessionReflection {

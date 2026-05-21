@@ -63,6 +63,9 @@ export function EventEditorModal({
     initial.preActions ?? [],
   );
   const [preDraft, setPreDraft] = useState("");
+  const [reminderMin, setReminderMin] = useState<number | undefined>(
+    initial.reminderMin,
+  );
 
   // Hydrate state when the modal opens; also load rrule from DB if editing.
   useEffect(() => {
@@ -81,6 +84,7 @@ export function EventEditorModal({
     setCount(10);
     setPreActions(initial.preActions ?? []);
     setPreDraft("");
+    setReminderMin(initial.reminderMin);
 
     if (!editingId) return;
     let cancelled = false;
@@ -90,6 +94,7 @@ export function EventEditorModal({
         if (cancelled || !ev) return;
         if (ev.labelIds) setLabelIds(ev.labelIds);
         if (ev.preActions) setPreActions(ev.preActions);
+        if (ev.reminderMin != null) setReminderMin(ev.reminderMin);
         if (!ev.rrule) return;
         const r = ev.rrule;
         setRecurrenceEnabled(true);
@@ -118,6 +123,7 @@ export function EventEditorModal({
     initial.description,
     initial.labelIds,
     initial.preActions,
+    initial.reminderMin,
   ]);
 
   const buildRrule = (): RecurrenceRule | undefined => {
@@ -142,11 +148,17 @@ export function EventEditorModal({
         labelIds,
         rrule,
         preActions,
+        reminderMin,
       });
     } else {
       await createEvent({ title, start, end, description });
       // createEvent doesn't accept rrule/labelIds/preActions directly; patch after create if needed.
-      if (rrule || labelIds.length > 0 || preActions.length > 0) {
+      if (
+        rrule ||
+        labelIds.length > 0 ||
+        preActions.length > 0 ||
+        reminderMin != null
+      ) {
         const all = await getDB().events.toArray();
         const created = all.find((e) => e.start === start && e.title === title);
         if (created) {
@@ -154,6 +166,7 @@ export function EventEditorModal({
             ...(rrule ? { rrule } : {}),
             ...(labelIds.length > 0 ? { labelIds } : {}),
             ...(preActions.length > 0 ? { preActions } : {}),
+            ...(reminderMin != null ? { reminderMin } : {}),
           });
         }
       }
@@ -326,6 +339,40 @@ export function EventEditorModal({
             <div className="mt-3 text-xs">
               <span className="mb-1 block text-[var(--ink-3)]">라벨</span>
               <LabelPicker selected={labelIds} onChange={setLabelIds} />
+            </div>
+
+            <div className="mt-3 text-xs">
+              <span className="mb-1 block text-[var(--ink-3)]">알림</span>
+              <div className="flex flex-wrap items-center gap-1">
+                {(
+                  [
+                    { label: "없음", value: undefined },
+                    { label: "정시", value: 0 },
+                    { label: "5분 전", value: 5 },
+                    { label: "10분 전", value: 10 },
+                    { label: "30분 전", value: 30 },
+                    { label: "1시간 전", value: 60 },
+                  ] as const
+                ).map((opt) => {
+                  const active = reminderMin === opt.value;
+                  return (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setReminderMin(opt.value)}
+                      aria-pressed={active}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[11px]",
+                        active
+                          ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                          : "border-[var(--line-strong)] bg-[var(--bg-1)] text-[var(--ink-2)] hover:bg-[var(--bg-2)]",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="mt-4 rounded-lg border border-[var(--line)] bg-[var(--bg-1)] p-3 text-xs">

@@ -19,6 +19,7 @@ import { TimerPanel } from "@/components/timer/TimerPanel";
 import { cn } from "@/lib/cn";
 import { useShortcutEngine } from "@/lib/shortcuts/useShortcutEngine";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { useReminders } from "@/lib/useReminders";
 import { type TabKey, useAppStore } from "@/stores/app";
 import { useSystemStore } from "@/stores/system";
 
@@ -59,6 +60,7 @@ function AppShellInner() {
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  useReminders();
 
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-[var(--bg-0)] text-[var(--ink-0)]">

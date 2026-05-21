@@ -2,7 +2,13 @@
 
 import { nanoid } from "nanoid";
 import { getDB } from "@/db/dexie";
-import type { Priority, Task, TaskStatus } from "@/types/domain";
+import { nextDueKey, nextOccurrenceAfter } from "@/lib/taskRecurrence";
+import type {
+  Priority,
+  RecurrenceRule,
+  Task,
+  TaskStatus,
+} from "@/types/domain";
 
 const now = () => Date.now();
 
@@ -13,6 +19,9 @@ export async function createTask(input: {
   parentId?: string;
   start?: number;
   end?: number;
+  due?: string;
+  estimateMin?: number;
+  rrule?: RecurrenceRule;
   color?: string;
   description?: string;
 }): Promise<Task> {
@@ -27,6 +36,9 @@ export async function createTask(input: {
     parentId: input.parentId,
     start: input.start,
     end: input.end,
+    due: input.due,
+    estimateMin: input.estimateMin,
+    rrule: input.rrule,
     color: input.color,
     createdAt: now(),
     updatedAt: now(),
@@ -64,4 +76,55 @@ export async function toggleTaskStatus(id: string): Promise<void> {
   if (!t) return;
   const next: TaskStatus = t.status === "done" ? "todo" : "done";
   await db.tasks.update(id, { status: next, updatedAt: now() });
+  // On completion, if the task has a recurrence rule, generate the next
+  // occurrence as a fresh todo task. The completed task is kept as history.
+  if (next === "done" && t.rrule) {
+    await spawnNextRecurrence(t);
+  }
+}
+
+async function spawnNextRecurrence(t: Task): Promise<void> {
+  if (!t.rrule) return;
+  const db = getDB();
+  // Prefer due-driven recurrence; fall back to start.
+  let nextDue: string | undefined;
+  let nextStart: number | undefined;
+  let nextEnd: number | undefined;
+  if (t.due) {
+    const nd = nextDueKey(t.due, t.rrule);
+    if (!nd) return;
+    nextDue = nd;
+  }
+  if (t.start != null) {
+    const base = new Date(t.start);
+    const n = nextOccurrenceAfter(base, t.rrule);
+    if (!n) {
+      if (!nextDue) return;
+    } else {
+      const delta = n.getTime() - t.start;
+      nextStart = n.getTime();
+      if (t.end != null) nextEnd = t.end + delta;
+    }
+  }
+  if (nextDue == null && nextStart == null) return;
+  const order = (await db.tasks.count()) + 1;
+  const fresh: Task = {
+    id: nanoid(),
+    title: t.title,
+    description: t.description,
+    priority: t.priority,
+    status: "todo",
+    parentId: t.parentId,
+    start: nextStart,
+    end: nextEnd,
+    due: nextDue,
+    estimateMin: t.estimateMin,
+    rrule: t.rrule,
+    color: t.color,
+    labelIds: t.labelIds,
+    createdAt: now(),
+    updatedAt: now(),
+    order,
+  };
+  await db.tasks.add(fresh);
 }

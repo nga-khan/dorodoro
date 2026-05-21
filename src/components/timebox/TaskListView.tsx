@@ -22,6 +22,7 @@ import { useState } from "react";
 import { useLabels, useTasks } from "@/db/hooks";
 import { reorderTasks, toggleTaskStatus } from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
+import { dueTone, formatDueLabel } from "@/lib/dueDate";
 import { PRIORITY_TONE, STATUS_TONE } from "@/lib/taskColors";
 import { useAppStore } from "@/stores/app";
 import type { Task } from "@/types/domain";
@@ -140,11 +141,26 @@ function SortableRow({
 
   const statusTone = STATUS_TONE[task.status];
   const prioTone = PRIORITY_TONE[task.priority];
+  const tone = dueTone(task);
+  const dueColor =
+    tone === "overdue"
+      ? "var(--danger-ink)"
+      : tone === "today"
+        ? "var(--priority-p1)"
+        : tone === "soon"
+          ? "var(--priority-p2)"
+          : "var(--ink-2)";
+  const overdue = tone === "overdue";
 
   return (
     <li
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        ...(overdue
+          ? { boxShadow: "inset 3px 0 0 0 var(--danger-ink)" }
+          : null),
+      }}
       className={cn(
         "group flex items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--bg-0)] px-3 py-2",
         task.status === "done" && "opacity-60",
@@ -191,6 +207,27 @@ function SortableRow({
           >
             {statusTone.label}
           </span>
+          {task.due && (
+            <span
+              className="rounded-full px-1.5 py-0.5"
+              style={{
+                color: dueColor,
+                background: `color-mix(in oklab, ${dueColor} 18%, transparent)`,
+              }}
+              title={`마감 ${task.due}`}
+            >
+              {formatDueLabel(task.due)}
+            </span>
+          )}
+          {task.rrule && (
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[var(--ink-2)]"
+              style={{ background: "var(--bg-2)" }}
+              title="반복"
+            >
+              ↻
+            </span>
+          )}
           {taskLabels.length > 0 && (
             <span className="inline-flex items-center gap-1.5">
               <span className="flex items-center">

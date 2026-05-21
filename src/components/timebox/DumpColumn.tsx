@@ -20,12 +20,15 @@ import {
 import { cn } from "@/lib/cn";
 import { useCommand } from "@/lib/shortcuts/bus";
 import { formatDumpTime } from "@/lib/time";
+import type { DumpItem } from "@/types/domain";
+import { DumpPromoteModal } from "./DumpPromoteModal";
 
 export function DumpColumn() {
   const items = useDumpItems();
   const [text, setText] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [promoteTarget, setPromoteTarget] = useState<DumpItem | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useCommand(
     "focus-dump",
@@ -192,7 +195,14 @@ export function DumpColumn() {
                   {!item.promotedTaskId && !selectMode && (
                     <button
                       type="button"
-                      onClick={() => promoteDumpToTask(item.id)}
+                      onClick={(e) => {
+                        if (e.shiftKey) {
+                          void promoteDumpToTask(item.id);
+                          return;
+                        }
+                        setPromoteTarget(item);
+                      }}
+                      title="클릭: 분류 후 승격 · Shift+클릭: 바로 승격"
                       className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--ink-2)] hover:bg-[var(--bg-1)]"
                     >
                       Task로
@@ -219,6 +229,10 @@ export function DumpColumn() {
           </li>
         )}
       </ul>
+      <DumpPromoteModal
+        item={promoteTarget}
+        onClose={() => setPromoteTarget(null)}
+      />
     </div>
   );
 }

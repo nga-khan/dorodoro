@@ -12,7 +12,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { LabelPicker } from "@/components/shell/LabelPicker";
-import { useSubtasks, useTasks } from "@/db/hooks";
+import { useSessionsForTask, useSubtasks, useTasks } from "@/db/hooks";
 import { demoteTaskToDump } from "@/db/repositories/dumpItems";
 import {
   createTask,
@@ -21,13 +21,29 @@ import {
   updateTask,
 } from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
+import { dateKey, dueTone, formatDueLabel } from "@/lib/dueDate";
 import { useCommand } from "@/lib/shortcuts/bus";
 import { PRIORITY_TONE, STATUS_TONE } from "@/lib/taskColors";
 import { useAppStore } from "@/stores/app";
-import type { Priority, Task, TaskStatus } from "@/types/domain";
+import type {
+  Priority,
+  RecurrenceRule,
+  Satisfaction,
+  Task,
+  TaskReflection,
+  TaskStatus,
+  Weekday,
+} from "@/types/domain";
 
 const STATUS_OPTIONS: TaskStatus[] = ["todo", "doing", "done"];
 const PRIORITY_OPTIONS: Priority[] = [1, 2, 3, 4];
+const WEEKDAY_LABEL = ["일", "월", "화", "수", "목", "금", "토"];
+const FREQ_LABEL: Record<RecurrenceRule["freq"], string> = {
+  daily: "매일",
+  weekly: "매주",
+  monthly: "매월",
+  yearly: "매년",
+};
 
 export function TaskDetailDrawer() {
   const selectedId = useAppStore((s) => s.selectedTaskId);
@@ -237,6 +253,16 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           </div>
         </Field>
         <div className="col-span-2">
+          <Field label="마감일">
+            <DueField task={task} />
+          </Field>
+        </div>
+        <div className="col-span-2">
+          <Field label="예상 소요시간">
+            <EstimateField task={task} />
+          </Field>
+        </div>
+        <div className="col-span-2">
           <Field label="시작 시각">
             <div className="flex flex-wrap items-center gap-1.5">
               <input
@@ -280,6 +306,10 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           onChange={(ids) => save({ labelIds: ids })}
         />
       </Field>
+
+      <RecurrenceField task={task} />
+
+      {task.status === "done" && <ReflectionSection task={task} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <div className="flex items-center gap-2">
@@ -329,6 +359,444 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
       </div>
     </div>
   );
+}
+
+const DUE_TONE_STYLE: Record<
+  "overdue" | "today" | "soon" | "future",
+  { color: string; bg: string }
+> = {
+  overdue: { color: "var(--danger-ink)", bg: "var(--danger-bg)" },
+  today: { color: "var(--priority-p1)", bg: "var(--bg-2)" },
+  soon: { color: "var(--priority-p2)", bg: "var(--bg-2)" },
+  future: { color: "var(--ink-2)", bg: "var(--bg-2)" },
+};
+
+function DueField({ task }: { task: Task }) {
+  const tone = dueTone(task);
+  const save = (patch: Partial<Task>) => updateTask(task.id, patch);
+  const setRelative = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    void save({ due: dateKey(d) });
+  };
+  const style = tone !== "none" ? DUE_TONE_STYLE[tone] : null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <input
+        type="date"
+        value={task.due ?? ""}
+        onChange={(e) => save({ due: e.target.value || undefined })}
+        className="min-w-0 flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5"
+      />
+      <div className="flex flex-wrap gap-1">
+        {(
+          [
+            { label: "오늘", days: 0 },
+            { label: "내일", days: 1 },
+            { label: "+3d", days: 3 },
+            { label: "+7d", days: 7 },
+          ] as const
+        ).map((q) => (
+          <button
+            key={q.label}
+            type="button"
+            onClick={() => setRelative(q.days)}
+            className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:bg-[var(--bg-2)] hover:text-[var(--ink-0)]"
+          >
+            {q.label}
+          </button>
+        ))}
+        {task.due && (
+          <button
+            type="button"
+            onClick={() => save({ due: undefined })}
+            className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--ink-3)] hover:bg-[var(--bg-2)] hover:text-[var(--ink-0)]"
+          >
+            지우기
+          </button>
+        )}
+      </div>
+      {task.due && style && (
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+          style={{
+            color: style.color,
+            background: `color-mix(in oklab, ${style.color} 18%, transparent)`,
+          }}
+        >
+          {formatDueLabel(task.due)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min}분`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
+}
+
+function EstimateField({ task }: { task: Task }) {
+  const sessions = useSessionsForTask(task.id);
+  const actualMin = Math.round(
+    sessions
+      .filter((s) => s.phase === "work" && s.completed)
+      .reduce((acc, s) => acc + ((s.endedAt ?? s.startedAt) - s.startedAt), 0) /
+      60_000,
+  );
+  const save = (estimateMin: number | undefined) =>
+    updateTask(task.id, { estimateMin });
+  const [draft, setDraft] = useState<string>(
+    task.estimateMin != null ? String(task.estimateMin) : "",
+  );
+  useEffect(() => {
+    setDraft(task.estimateMin != null ? String(task.estimateMin) : "");
+  }, [task.estimateMin]);
+
+  const commit = () => {
+    const v = draft.trim();
+    if (v === "") {
+      if (task.estimateMin != null) void save(undefined);
+      return;
+    }
+    const n = Math.max(0, Math.floor(Number(v)));
+    if (Number.isNaN(n)) return;
+    if (n !== task.estimateMin) void save(n);
+  };
+
+  const est = task.estimateMin;
+  const ratio = est && est > 0 ? actualMin / est : 0;
+  const overBudget = est != null && est > 0 && actualMin > est;
+  const tone = overBudget
+    ? "var(--danger-ink)"
+    : ratio >= 0.8
+      ? "var(--priority-p2)"
+      : "var(--ink-2)";
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <div className="inline-flex min-w-0 flex-1 items-center gap-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5">
+        <input
+          type="number"
+          min={0}
+          step={5}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+          }}
+          placeholder="—"
+          className="min-w-0 flex-1 bg-transparent outline-none"
+        />
+        <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+          분
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {([15, 30, 60, 90] as const).map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => save(q)}
+            className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:bg-[var(--bg-2)] hover:text-[var(--ink-0)]"
+          >
+            {q < 60 ? `${q}m` : `${q / 60}h`}
+          </button>
+        ))}
+      </div>
+      <div
+        className="basis-full text-[11px]"
+        style={{ color: tone }}
+        title="완료된 work 세션 합산"
+      >
+        실제{" "}
+        <span className="font-mono font-medium">
+          {formatMinutes(actualMin)}
+        </span>
+        {est != null && est > 0 && (
+          <>
+            {" "}
+            / 예상 {formatMinutes(est)}
+            <span className="ml-1 text-[var(--ink-3)]">
+              ({Math.round(ratio * 100)}%)
+            </span>
+            {overBudget && <span className="ml-1">⚠ 초과</span>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const SATISFACTION_OPTIONS: {
+  value: Satisfaction;
+  label: string;
+  emoji: string;
+}[] = [
+  { value: "low", label: "아쉬움", emoji: "😕" },
+  { value: "mid", label: "보통", emoji: "🙂" },
+  { value: "high", label: "만족", emoji: "🤩" },
+];
+
+function ReflectionSection({ task }: { task: Task }) {
+  const r = task.reflection;
+  const [note, setNote] = useState(r?.note ?? "");
+  const [actualMin, setActualMin] = useState(
+    r?.actualMin != null ? String(r.actualMin) : "",
+  );
+
+  useEffect(() => {
+    setNote(task.reflection?.note ?? "");
+    setActualMin(
+      task.reflection?.actualMin != null
+        ? String(task.reflection.actualMin)
+        : "",
+    );
+  }, [task.reflection?.note, task.reflection?.actualMin]);
+
+  const patch = (p: Partial<TaskReflection>) => {
+    const next: TaskReflection = {
+      ...(task.reflection ?? {}),
+      ...p,
+      recordedAt: Date.now(),
+    };
+    void updateTask(task.id, { reflection: next });
+  };
+  const commitNote = () => {
+    if ((note || "") !== (task.reflection?.note ?? "")) {
+      patch({ note: note || undefined });
+    }
+  };
+  const commitActual = () => {
+    const v = actualMin.trim();
+    const n = v === "" ? undefined : Math.max(0, Math.floor(Number(v)));
+    if (Number.isNaN(n as number)) return;
+    if (n !== task.reflection?.actualMin) patch({ actualMin: n });
+  };
+
+  return (
+    <Field label="완료 회고">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--bg-1)] p-3">
+        <div className="mb-2 flex items-center gap-1">
+          {SATISFACTION_OPTIONS.map((opt) => {
+            const active = task.reflection?.satisfaction === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => patch({ satisfaction: opt.value })}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs",
+                  active
+                    ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                    : "border-[var(--line-strong)] bg-[var(--bg-0)] text-[var(--ink-2)] hover:bg-[var(--bg-2)]",
+                )}
+              >
+                <span aria-hidden>{opt.emoji}</span>
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={commitNote}
+          placeholder="어땠나요? 잘된 점·아쉬운 점·다음 액션…"
+          rows={3}
+          className="w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-0)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+        />
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+            실제 소요 (분)
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={5}
+            value={actualMin}
+            onChange={(e) => setActualMin(e.target.value)}
+            onBlur={commitActual}
+            placeholder={
+              task.estimateMin != null ? String(task.estimateMin) : "—"
+            }
+            className="w-20 rounded-md border border-[var(--line-strong)] bg-[var(--bg-0)] px-2 py-1 text-right"
+          />
+          {task.estimateMin != null &&
+            task.reflection?.actualMin != null &&
+            task.estimateMin > 0 && (
+              <span className="text-[var(--ink-3)]">
+                예상 {task.estimateMin}분 ·{" "}
+                {Math.round(
+                  (task.reflection.actualMin / task.estimateMin) * 100,
+                )}
+                %
+              </span>
+            )}
+        </div>
+      </div>
+    </Field>
+  );
+}
+
+function RecurrenceField({ task }: { task: Task }) {
+  const enabled = !!task.rrule;
+  const r = task.rrule;
+  const save = (rrule: RecurrenceRule | undefined) =>
+    updateTask(task.id, { rrule });
+
+  const setEnabled = (on: boolean) => {
+    if (on) {
+      if (r) return;
+      save({ freq: "weekly", interval: 1 });
+    } else {
+      save(undefined);
+    }
+  };
+  const patch = (p: Partial<RecurrenceRule>) => {
+    if (!r) return;
+    save({ ...r, ...p });
+  };
+  const toggleWeekday = (d: Weekday) => {
+    if (!r) return;
+    const cur = new Set(r.byweekday ?? []);
+    if (cur.has(d)) cur.delete(d);
+    else cur.add(d);
+    const next = [...cur].sort() as Weekday[];
+    save({ ...r, byweekday: next.length > 0 ? next : undefined });
+  };
+  const endKind: "never" | "until" = r?.until != null ? "until" : "never";
+
+  return (
+    <Field label="반복">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--bg-1)] p-3 text-xs">
+        <label className="flex items-center justify-between">
+          <span className="text-[var(--ink-2)]">
+            {enabled
+              ? "완료 시 다음 발생을 자동 생성"
+              : "반복 없음 — 일회성 Task"}
+          </span>
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="h-4 w-4 accent-[var(--ink-0)]"
+          />
+        </label>
+        {enabled && r && (
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+              <select
+                value={r.freq}
+                onChange={(e) =>
+                  patch({ freq: e.target.value as RecurrenceRule["freq"] })
+                }
+                className="rounded-md border border-[var(--line-strong)] bg-[var(--bg-0)] px-2 py-1"
+                aria-label="반복 빈도"
+              >
+                {(["daily", "weekly", "monthly", "yearly"] as const).map(
+                  (f) => (
+                    <option key={f} value={f}>
+                      {FREQ_LABEL[f]}
+                    </option>
+                  ),
+                )}
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={r.interval ?? 1}
+                onChange={(e) =>
+                  patch({ interval: Math.max(1, Number(e.target.value) || 1) })
+                }
+                className="w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-0)] px-2 py-1"
+                aria-label="반복 간격"
+              />
+              <span className="text-[var(--ink-3)]">간격</span>
+            </div>
+            {r.freq === "weekly" && (
+              <div className="flex flex-wrap items-center gap-1">
+                {WEEKDAY_LABEL.map((wd, i) => {
+                  const active = (r.byweekday ?? []).includes(i as Weekday);
+                  return (
+                    <button
+                      key={wd}
+                      type="button"
+                      onClick={() => toggleWeekday(i as Weekday)}
+                      className={cn(
+                        "h-7 w-7 rounded-full border text-[11px]",
+                        active
+                          ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                          : "border-[var(--line-strong)] text-[var(--ink-2)] hover:bg-[var(--bg-0)]",
+                      )}
+                      aria-pressed={active}
+                    >
+                      {wd}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+                종료
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {(["never", "until"] as const).map((k) => (
+                  <label key={k} className="inline-flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name={`task-rrule-end-${task.id}`}
+                      checked={endKind === k}
+                      onChange={() =>
+                        patch(
+                          k === "never"
+                            ? { until: undefined }
+                            : { until: Date.now() },
+                        )
+                      }
+                      className="accent-[var(--ink-0)]"
+                    />
+                    <span>{k === "never" ? "없음" : "날짜까지"}</span>
+                  </label>
+                ))}
+              </div>
+              {endKind === "until" && (
+                <input
+                  type="date"
+                  value={r.until ? toDateInput(r.until) : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      patch({ until: undefined });
+                      return;
+                    }
+                    const [y, m, d] = e.target.value.split("-").map(Number);
+                    const t = new Date(y, m - 1, d, 23, 59, 59).getTime();
+                    patch({ until: t });
+                  }}
+                  className="mt-1 w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-0)] px-2 py-1.5"
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </Field>
+  );
+}
+
+function toDateInput(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function SubtaskSection({ parentId }: { parentId: string }) {

@@ -319,6 +319,7 @@ function TimeGrid({
                 it.kind === "task" ? (it.data.start ?? 0) : it.data.start;
               return isSameDay(new Date(s), new Date(dayMs));
             });
+            const conflictIds = computeConflictIds(dayItems);
             return (
               <div
                 key={dayMs}
@@ -354,6 +355,7 @@ function TimeGrid({
                       color={resolveEventColor(it, labelMap)}
                       faded={isMove && drag.moved}
                       dragging={isMove || isResize}
+                      conflict={conflictIds.has(it.data.id)}
                     />
                   );
                 })}
@@ -387,6 +389,24 @@ function TimeGrid({
   );
 }
 
+function computeConflictIds(items: CalendarItem[]): Set<string> {
+  const events = items.filter(
+    (it): it is Extract<CalendarItem, { kind: "event" }> => it.kind === "event",
+  );
+  const conflicts = new Set<string>();
+  for (let i = 0; i < events.length; i += 1) {
+    for (let j = i + 1; j < events.length; j += 1) {
+      const a = events[i].data;
+      const b = events[j].data;
+      if (a.start < b.end && b.start < a.end) {
+        conflicts.add(a.id);
+        conflicts.add(b.id);
+      }
+    }
+  }
+  return conflicts;
+}
+
 function EventBlock({
   item,
   start,
@@ -395,6 +415,7 @@ function EventBlock({
   color,
   faded = false,
   dragging = false,
+  conflict = false,
 }: {
   item: CalendarItem;
   start: number;
@@ -403,6 +424,7 @@ function EventBlock({
   color: string | null;
   faded?: boolean;
   dragging?: boolean;
+  conflict?: boolean;
 }) {
   const isEvent = item.kind === "event";
   const preActions = isEvent ? (item.data.preActions ?? []) : [];
@@ -422,12 +444,23 @@ function EventBlock({
         opacity: faded ? 0.4 : 1,
         cursor: isEvent ? (dragging ? "grabbing" : "grab") : "pointer",
         zIndex: dragging ? 5 : 1,
+        ...(conflict
+          ? { boxShadow: "inset 0 0 0 1.5px var(--danger-ink)" }
+          : null),
       }}
     >
       <div className="flex items-center gap-1">
         <span className="min-w-0 flex-1 truncate font-medium">
           {item.data.title}
         </span>
+        {conflict && (
+          <span
+            title="다른 일정과 겹칩니다"
+            className="shrink-0 rounded-full bg-[var(--danger-bg)] px-1.5 py-px text-[9px] font-medium text-[var(--danger-ink)]"
+          >
+            ⚠ 충돌
+          </span>
+        )}
         {preActions.length > 0 && (
           <span
             title={`사전 액션 ${preDone}/${preActions.length}`}

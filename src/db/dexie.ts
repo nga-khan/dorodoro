@@ -78,6 +78,10 @@ class DoroDB extends Dexie {
             }
           });
       });
+    this.version(9).stores({
+      // Add `due` index so overdue queries can use it; existing fields preserved.
+      tasks: "id, status, priority, start, due, parentId, order, updatedAt",
+    });
   }
 }
 
