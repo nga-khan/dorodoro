@@ -46,6 +46,12 @@ export interface RecurrenceRule {
   count?: number; // occurrences cap (use either until or count, not both)
 }
 
+export interface PreAction {
+  id: ID;
+  title: string;
+  done: boolean;
+}
+
 export interface CalendarEvent {
   id: ID;
   title: string;
@@ -58,6 +64,7 @@ export interface CalendarEvent {
   updatedAt: number;
   rrule?: RecurrenceRule;
   exDates?: number[]; // excluded occurrence start times (ms)
+  preActions?: PreAction[];
 }
 
 export interface SessionReflection {

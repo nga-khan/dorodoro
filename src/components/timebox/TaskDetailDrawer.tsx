@@ -2,11 +2,24 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { FiCheckSquare, FiInbox, FiSave, FiTrash2 } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiCheckSquare,
+  FiInbox,
+  FiPlus,
+  FiSave,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
 import { LabelPicker } from "@/components/shell/LabelPicker";
-import { useTasks } from "@/db/hooks";
+import { useSubtasks, useTasks } from "@/db/hooks";
 import { demoteTaskToDump } from "@/db/repositories/dumpItems";
-import { deleteTask, updateTask } from "@/db/repositories/tasks";
+import {
+  createTask,
+  deleteTask,
+  toggleTaskStatus,
+  updateTask,
+} from "@/db/repositories/tasks";
 import { cn } from "@/lib/cn";
 import { useCommand } from "@/lib/shortcuts/bus";
 import { PRIORITY_TONE, STATUS_TONE } from "@/lib/taskColors";
@@ -72,6 +85,12 @@ export function TaskDetailDrawer() {
 function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
+  const setSelected = useAppStore((s) => s.setSelectedTaskId);
+  const allTasks = useTasks();
+  const parentTask = task.parentId
+    ? (allTasks.find((t) => t.id === task.parentId) ?? null)
+    : null;
+  const isSubtask = !!task.parentId;
 
   useEffect(() => {
     setTitle(task.title);
@@ -91,11 +110,23 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
-          <FiCheckSquare aria-hidden className="text-[11px]" />
-          Task
-        </span>
+      <div className="flex items-center justify-between gap-2">
+        {parentTask ? (
+          <button
+            type="button"
+            onClick={() => setSelected(parentTask.id)}
+            className="inline-flex min-w-0 items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-3)] hover:text-[var(--ink-0)]"
+            title={parentTask.title}
+          >
+            <FiArrowLeft aria-hidden className="shrink-0 text-[12px]" />
+            <span className="truncate">{parentTask.title}</span>
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-3)]">
+            <FiCheckSquare aria-hidden className="text-[11px]" />
+            Task
+          </span>
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -234,6 +265,8 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
         />
       </Field>
 
+      {!isSubtask && <SubtaskSection parentId={task.id} />}
+
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <div className="flex items-center gap-2">
           <button
@@ -280,6 +313,120 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           저장
         </button>
       </div>
+    </div>
+  );
+}
+
+function SubtaskSection({ parentId }: { parentId: string }) {
+  const subtasks = useSubtasks(parentId);
+  const setSelected = useAppStore((s) => s.setSelectedTaskId);
+  const [draft, setDraft] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = draft.trim();
+    if (!v) return;
+    setDraft("");
+    await createTask({ title: v, parentId });
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+        서브 업무 · {subtasks.length}
+      </span>
+      {subtasks.length === 0 ? (
+        <div className="rounded-md border border-dashed border-[var(--line)] px-3 py-2 text-[11px] text-[var(--ink-3)]">
+          아직 없어요 — 아래에 추가해보세요.
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {subtasks.map((s) => {
+            const done = s.status === "done";
+            const prio = PRIORITY_TONE[s.priority];
+            return (
+              <li
+                key={s.id}
+                className="group flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1.5"
+                style={{ borderLeft: `3px solid ${prio.token}` }}
+              >
+                <button
+                  type="button"
+                  onClick={() => void toggleTaskStatus(s.id)}
+                  aria-label={done ? "완료 해제" : "완료"}
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]",
+                    done
+                      ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                      : "border-[var(--line-strong)] text-transparent hover:border-[var(--ink-2)]",
+                  )}
+                >
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(s.id)}
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-left text-xs",
+                    done && "text-[var(--ink-3)] line-through",
+                  )}
+                  title={s.title}
+                >
+                  {s.title}
+                </button>
+                <span
+                  className="hidden rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider sm:inline"
+                  style={{
+                    color: prio.token,
+                    background: `color-mix(in oklab, ${prio.token} 16%, transparent)`,
+                  }}
+                >
+                  {prio.short}
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (
+                      typeof window !== "undefined" &&
+                      !window.confirm("서브 업무를 삭제할까요?")
+                    )
+                      return;
+                    await deleteTask(s.id);
+                  }}
+                  aria-label="삭제"
+                  className="rounded p-1 text-[var(--ink-4)] opacity-0 transition-opacity hover:text-[var(--danger-ink)] group-hover:opacity-100"
+                >
+                  <FiX aria-hidden />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <form onSubmit={submit} className="flex gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              (e.nativeEvent.isComposing || e.keyCode === 229)
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          placeholder="서브 업무 추가 — Enter"
+          className="flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--ink-2)]"
+        />
+        <button
+          type="submit"
+          aria-label="추가"
+          className="inline-flex items-center gap-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
+        >
+          <FiPlus aria-hidden />
+        </button>
+      </form>
     </div>
   );
 }

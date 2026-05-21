@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
-import { FiCalendar, FiCheck, FiTrash2, FiX } from "react-icons/fi";
+import { FiCalendar, FiCheck, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { LabelPicker } from "@/components/shell/LabelPicker";
 import { getDB } from "@/db/dexie";
 import {
@@ -11,7 +12,12 @@ import {
   updateEvent,
 } from "@/db/repositories/events";
 import { cn } from "@/lib/cn";
-import type { CalendarEvent, RecurrenceRule, Weekday } from "@/types/domain";
+import type {
+  CalendarEvent,
+  PreAction,
+  RecurrenceRule,
+  Weekday,
+} from "@/types/domain";
 
 interface Props {
   open: boolean;
@@ -54,6 +60,11 @@ export function EventEditorModal({
   const [untilStr, setUntilStr] = useState("");
   const [count, setCount] = useState(10);
 
+  const [preActions, setPreActions] = useState<PreAction[]>(
+    initial.preActions ?? [],
+  );
+  const [preDraft, setPreDraft] = useState("");
+
   // Hydrate state when the modal opens; also load rrule from DB if editing.
   useEffect(() => {
     if (!open) return;
@@ -70,6 +81,8 @@ export function EventEditorModal({
     setEndKind("never");
     setUntilStr("");
     setCount(10);
+    setPreActions(initial.preActions ?? []);
+    setPreDraft("");
 
     if (!editingId) return;
     let cancelled = false;
@@ -78,6 +91,7 @@ export function EventEditorModal({
       .then((ev) => {
         if (cancelled || !ev) return;
         if (ev.labelIds) setLabelIds(ev.labelIds);
+        if (ev.preActions) setPreActions(ev.preActions);
         if (!ev.rrule) return;
         const r = ev.rrule;
         setRecurrenceEnabled(true);
@@ -106,6 +120,7 @@ export function EventEditorModal({
     initial.description,
     initial.color,
     initial.labelIds,
+    initial.preActions,
   ]);
 
   const buildRrule = (): RecurrenceRule | undefined => {
@@ -130,17 +145,19 @@ export function EventEditorModal({
         color,
         labelIds,
         rrule,
+        preActions,
       });
     } else {
       await createEvent({ title, start, end, description, color });
-      // createEvent doesn't accept rrule/labelIds directly; patch after create if needed.
-      if (rrule || labelIds.length > 0) {
+      // createEvent doesn't accept rrule/labelIds/preActions directly; patch after create if needed.
+      if (rrule || labelIds.length > 0 || preActions.length > 0) {
         const all = await getDB().events.toArray();
         const created = all.find((e) => e.start === start && e.title === title);
         if (created) {
           await updateEvent(created.id, {
             ...(rrule ? { rrule } : {}),
             ...(labelIds.length > 0 ? { labelIds } : {}),
+            ...(preActions.length > 0 ? { preActions } : {}),
           });
         }
       }
@@ -337,6 +354,110 @@ export function EventEditorModal({
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-1.5 text-xs">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+                사전 액션 · {preActions.length}
+              </span>
+              {preActions.length === 0 ? (
+                <div className="rounded-md border border-dashed border-[var(--line)] px-3 py-2 text-[11px] text-[var(--ink-3)]">
+                  아직 없어요 — 아래에 추가해보세요.
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {preActions.map((pa) => (
+                    <li
+                      key={pa.id}
+                      className="group flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreActions((prev) =>
+                            prev.map((x) =>
+                              x.id === pa.id ? { ...x, done: !x.done } : x,
+                            ),
+                          )
+                        }
+                        aria-label={pa.done ? "완료 해제" : "완료"}
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]",
+                          pa.done
+                            ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                            : "border-[var(--line-strong)] text-transparent hover:border-[var(--ink-2)]",
+                        )}
+                      >
+                        ✓
+                      </button>
+                      <input
+                        value={pa.title}
+                        onChange={(e) =>
+                          setPreActions((prev) =>
+                            prev.map((x) =>
+                              x.id === pa.id
+                                ? { ...x, title: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                        className={cn(
+                          "min-w-0 flex-1 bg-transparent text-xs outline-none",
+                          pa.done && "text-[var(--ink-3)] line-through",
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreActions((prev) =>
+                            prev.filter((x) => x.id !== pa.id),
+                          )
+                        }
+                        aria-label="삭제"
+                        className="rounded p-1 text-[var(--ink-4)] opacity-0 transition-opacity hover:text-[var(--danger-ink)] group-hover:opacity-100"
+                      >
+                        <FiX aria-hidden />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = preDraft.trim();
+                  if (!v) return;
+                  setPreActions((prev) => [
+                    ...prev,
+                    { id: nanoid(), title: v, done: false },
+                  ]);
+                  setPreDraft("");
+                }}
+                className="flex gap-1.5"
+              >
+                <input
+                  value={preDraft}
+                  onChange={(e) => setPreDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      (e.nativeEvent.isComposing || e.keyCode === 229)
+                    ) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  placeholder="사전 액션 추가 — Enter"
+                  className="flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--ink-2)]"
+                />
+                <button
+                  type="submit"
+                  aria-label="추가"
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
+                >
+                  <FiPlus aria-hidden />
+                </button>
+              </form>
             </div>
 
             <textarea

@@ -30,6 +30,21 @@ export function useTasks(): Task[] {
   return useClientDB(() => getDB().tasks.orderBy("order").toArray(), [], []);
 }
 
+export function useSubtasks(parentId: string | null | undefined): Task[] {
+  return useClientDB(
+    async () => {
+      if (!parentId) return [];
+      const rows = await getDB()
+        .tasks.where("parentId")
+        .equals(parentId)
+        .toArray();
+      return rows.sort((a, b) => a.order - b.order);
+    },
+    [parentId],
+    [],
+  );
+}
+
 export function useTasksInRange(startMs: number, endMs: number): Task[] {
   return useClientDB(
     async () =>

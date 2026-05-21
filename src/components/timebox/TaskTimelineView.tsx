@@ -43,7 +43,9 @@ export function TaskTimelineView({
   const placements = useMemo(
     () =>
       tasks
-        .filter((t) => t.start != null && t.status !== "done")
+        .filter(
+          (t) => t.start != null && t.status !== "done" && t.parentId == null,
+        )
         .map((t) => {
           const start = Math.max(t.start ?? 0, rangeStartMs);
           const end = Math.min(

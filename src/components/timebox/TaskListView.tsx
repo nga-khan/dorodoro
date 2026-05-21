@@ -37,8 +37,8 @@ export function TaskListView({
   const allTasks = useTasks();
   const tasks =
     showOnly === "done"
-      ? allTasks.filter((t) => t.status === "done")
-      : allTasks.filter((t) => t.status !== "done");
+      ? allTasks.filter((t) => t.status === "done" && t.parentId == null)
+      : allTasks.filter((t) => t.status !== "done" && t.parentId == null);
   const labels = useLabels();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

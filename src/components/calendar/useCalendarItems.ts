@@ -13,7 +13,9 @@ export function useCalendarItems(rangeStart: number, rangeEnd: number) {
 
   return useMemo<CalendarItem[]>(() => {
     const taskItems = tasks
-      .filter((t) => t.start != null && t.status !== "done")
+      .filter(
+        (t) => t.start != null && t.status !== "done" && t.parentId == null,
+      )
       .map<CalendarItem>((t) => ({ kind: "task", data: t }));
     const eventItems = events.flatMap((e) =>
       expandEvent(e, rangeStart, rangeEnd).map<CalendarItem>((data) => ({
