@@ -158,34 +158,43 @@ function LaneCard({
           className="pointer-events-none absolute -top-1 left-0 right-0 h-0.5 rounded-full bg-[var(--ink-0)]"
         />
       )}
+      {/* biome-ignore lint/a11y/useSemanticElements: needs to contain a drag-handle button (button-in-button forbidden) */}
       <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelected(task.id)}
+        onDoubleClick={() => void toggleTaskStatus(task.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSelected(task.id);
+          }
+        }}
         className={cn(
-          "group flex flex-col gap-1 rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-2 py-1.5",
+          "group flex cursor-pointer flex-col gap-1 rounded-md border border-[var(--line)] bg-[var(--bg-0)] px-2 py-1.5 hover:bg-[var(--bg-1)]",
           task.status === "done" && "opacity-60",
         )}
+        title={task.title}
       >
         <div className="flex items-start gap-1.5">
           <button
             type="button"
             {...attributes}
             {...listeners}
+            onClick={(e) => e.stopPropagation()}
             className="mt-0.5 cursor-grab touch-none text-[var(--ink-4)] hover:text-[var(--ink-2)]"
             aria-label="drag"
           >
             ⋮⋮
           </button>
-          <button
-            type="button"
-            onClick={() => setSelected(task.id)}
-            onDoubleClick={() => void toggleTaskStatus(task.id)}
+          <span
             className={cn(
               "min-w-0 flex-1 text-left text-xs",
               task.status === "done" && "text-[var(--ink-3)] line-through",
             )}
-            title={task.title}
           >
             <span className="line-clamp-2 break-words">{task.title}</span>
-          </button>
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-1 pl-5 text-[10px]">
           <span
