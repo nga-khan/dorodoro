@@ -213,6 +213,116 @@ export function EventEditorModal({
               placeholder="제목"
               className="mb-4 w-full rounded-lg border border-[var(--line-strong)] bg-[var(--bg-1)] px-3 py-2 text-base outline-none focus:border-[var(--ink-2)]"
             />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="설명 (선택)"
+              rows={3}
+              className="mb-4 w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+            />
+            <div className="mb-4 flex flex-col gap-1.5 text-xs">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
+                사전 액션 · {preActions.length}
+              </span>
+              {preActions.length === 0 ? (
+                <div className="rounded-md border border-dashed border-[var(--line)] px-3 py-2 text-[11px] text-[var(--ink-3)]">
+                  아직 없어요 — 아래에 추가해보세요.
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {preActions.map((pa) => (
+                    <li
+                      key={pa.id}
+                      className="group flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreActions((prev) =>
+                            prev.map((x) =>
+                              x.id === pa.id ? { ...x, done: !x.done } : x,
+                            ),
+                          )
+                        }
+                        aria-label={pa.done ? "완료 해제" : "완료"}
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]",
+                          pa.done
+                            ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
+                            : "border-[var(--line-strong)] text-transparent hover:border-[var(--ink-2)]",
+                        )}
+                      >
+                        ✓
+                      </button>
+                      <input
+                        value={pa.title}
+                        onChange={(e) =>
+                          setPreActions((prev) =>
+                            prev.map((x) =>
+                              x.id === pa.id
+                                ? { ...x, title: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                        className={cn(
+                          "min-w-0 flex-1 bg-transparent text-xs outline-none",
+                          pa.done && "text-[var(--ink-3)] line-through",
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreActions((prev) =>
+                            prev.filter((x) => x.id !== pa.id),
+                          )
+                        }
+                        aria-label="삭제"
+                        className="rounded p-1 text-[var(--ink-4)] opacity-0 transition-opacity hover:text-[var(--danger-ink)] group-hover:opacity-100"
+                      >
+                        <FiX aria-hidden />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const v = preDraft.trim();
+                  if (!v) return;
+                  setPreActions((prev) => [
+                    ...prev,
+                    { id: nanoid(), title: v, done: false },
+                  ]);
+                  setPreDraft("");
+                }}
+                className="flex gap-1.5"
+              >
+                <input
+                  value={preDraft}
+                  onChange={(e) => setPreDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      (e.nativeEvent.isComposing || e.keyCode === 229)
+                    ) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  placeholder="사전 액션 추가 — Enter"
+                  className="flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--ink-2)]"
+                />
+                <button
+                  type="submit"
+                  aria-label="추가"
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
+                >
+                  <FiPlus aria-hidden />
+                </button>
+              </form>
+            </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <DTField label="시작" value={startStr} onChange={setStartStr} />
               <DTField label="종료" value={endStr} onChange={setEndStr} />
@@ -356,117 +466,6 @@ export function EventEditorModal({
               )}
             </div>
 
-            <div className="mt-4 flex flex-col gap-1.5 text-xs">
-              <span className="text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
-                사전 액션 · {preActions.length}
-              </span>
-              {preActions.length === 0 ? (
-                <div className="rounded-md border border-dashed border-[var(--line)] px-3 py-2 text-[11px] text-[var(--ink-3)]">
-                  아직 없어요 — 아래에 추가해보세요.
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {preActions.map((pa) => (
-                    <li
-                      key={pa.id}
-                      className="group flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--bg-1)] px-2 py-1.5"
-                    >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreActions((prev) =>
-                            prev.map((x) =>
-                              x.id === pa.id ? { ...x, done: !x.done } : x,
-                            ),
-                          )
-                        }
-                        aria-label={pa.done ? "완료 해제" : "완료"}
-                        className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]",
-                          pa.done
-                            ? "border-[var(--ink-0)] bg-[var(--ink-0)] text-[var(--bg-0)]"
-                            : "border-[var(--line-strong)] text-transparent hover:border-[var(--ink-2)]",
-                        )}
-                      >
-                        ✓
-                      </button>
-                      <input
-                        value={pa.title}
-                        onChange={(e) =>
-                          setPreActions((prev) =>
-                            prev.map((x) =>
-                              x.id === pa.id
-                                ? { ...x, title: e.target.value }
-                                : x,
-                            ),
-                          )
-                        }
-                        className={cn(
-                          "min-w-0 flex-1 bg-transparent text-xs outline-none",
-                          pa.done && "text-[var(--ink-3)] line-through",
-                        )}
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreActions((prev) =>
-                            prev.filter((x) => x.id !== pa.id),
-                          )
-                        }
-                        aria-label="삭제"
-                        className="rounded p-1 text-[var(--ink-4)] opacity-0 transition-opacity hover:text-[var(--danger-ink)] group-hover:opacity-100"
-                      >
-                        <FiX aria-hidden />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const v = preDraft.trim();
-                  if (!v) return;
-                  setPreActions((prev) => [
-                    ...prev,
-                    { id: nanoid(), title: v, done: false },
-                  ]);
-                  setPreDraft("");
-                }}
-                className="flex gap-1.5"
-              >
-                <input
-                  value={preDraft}
-                  onChange={(e) => setPreDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === "Enter" &&
-                      (e.nativeEvent.isComposing || e.keyCode === 229)
-                    ) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
-                  placeholder="사전 액션 추가 — Enter"
-                  className="flex-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2.5 py-1.5 text-xs outline-none focus:border-[var(--ink-2)]"
-                />
-                <button
-                  type="submit"
-                  aria-label="추가"
-                  className="inline-flex items-center gap-1 rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-2 text-xs text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
-                >
-                  <FiPlus aria-hidden />
-                </button>
-              </form>
-            </div>
-
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="설명 (선택)"
-              rows={3}
-              className="mt-3 w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
-            />
             <div className="mt-5 flex items-center justify-between gap-2">
               <div className="flex flex-col items-start gap-1">
                 {editingId && (
