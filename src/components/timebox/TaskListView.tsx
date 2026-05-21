@@ -191,6 +191,13 @@ function SortableRow({
           >
             {statusTone.label}
           </span>
+          {task.color && (
+            <span
+              title="할당 색상"
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-[var(--line-strong)]"
+              style={{ background: task.color }}
+            />
+          )}
           {taskLabels.map((l) => (
             <span
               key={l.id}
@@ -205,16 +212,6 @@ function SortableRow({
           ))}
         </div>
       </button>
-      {task.color && (
-        <span
-          title="할당 색상"
-          className="inline-block h-3 w-6 shrink-0 rounded-full"
-          style={{
-            background: `color-mix(in oklab, ${task.color} 24%, transparent)`,
-            boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${task.color} 55%, transparent)`,
-          }}
-        />
-      )}
     </li>
   );
 }
