@@ -150,6 +150,26 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
         className="w-full bg-transparent text-lg font-medium tracking-tight outline-none"
       />
 
+      <Field label="설명">
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onBlur={() => save({ description })}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              void commitAndClose();
+            }
+          }}
+          rows={5}
+          placeholder="⌘/Ctrl + Enter 로 저장 후 닫기"
+          className="w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
+        />
+      </Field>
+
+      {!isSubtask && <SubtaskSection parentId={task.id} />}
+
       <div className="grid grid-cols-2 gap-3 text-xs">
         <Field label="우선순위">
           <div className="flex w-full overflow-hidden rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] p-0.5">
@@ -266,26 +286,6 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           onChange={(ids) => save({ labelIds: ids })}
         />
       </Field>
-
-      <Field label="설명">
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onBlur={() => save({ description })}
-          onKeyDown={(e) => {
-            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              void commitAndClose();
-            }
-          }}
-          rows={5}
-          placeholder="⌘/Ctrl + Enter 로 저장 후 닫기"
-          className="w-full rounded-md border border-[var(--line-strong)] bg-[var(--bg-1)] px-3 py-2 text-sm outline-none focus:border-[var(--ink-2)]"
-        />
-      </Field>
-
-      {!isSubtask && <SubtaskSection parentId={task.id} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <div className="flex items-center gap-2">
